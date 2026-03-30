@@ -24,27 +24,34 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/api', apiRoutes);
 
-// Startup: Ensure default user exists
-import db from './database/db.js';
-const USER_ID = '00000000-0000-0000-0000-000000000000';
-try {
-  const user = await db('users').where({ id: USER_ID }).first();
-  if (!user) {
-    await db('users').insert({
-      id: USER_ID,
-      email: 'default@example.com',
-      password_hash: 'placeholder',
-      full_name: 'Default User'
-    });
-    console.log("✅ Created default system user");
-  }
-} catch (e) {
-  console.error("❌ Failed to ensure default user:", e);
-}
-
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Finance App API is running' });
 });
+
+// Startup: Ensure default user exists
+import db from './database/db.js';
+const USER_ID = '00000000-0000-0000-0000-000000000000';
+
+const ensureDefaultUser = async () => {
+  try {
+    const user = await db('users').where({ id: USER_ID }).first();
+    if (!user) {
+      await db('users').insert({
+        id: USER_ID,
+        email: 'default@example.com',
+        password_hash: 'placeholder',
+        full_name: 'Default User'
+      });
+      console.log("✅ Created default system user");
+    }
+  } catch (e) {
+    console.error("❌ Failed to ensure default user:", e);
+  }
+};
+
+if (process.env.NODE_ENV !== 'test') {
+  ensureDefaultUser();
+}
 
 app.listen(port, '0.0.0.0', () => {
   console.log(`✅ Backend Server is LIVE on port ${port}`);

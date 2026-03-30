@@ -40,7 +40,7 @@ export class AccountController {
     try {
       const { id } = req.params;
       const userId = req.userId;
-      const account = await AccountService.getAccountById(id);
+      const account = await AccountService.getAccountById(id as string);
       
       if (!account || account.user_id !== userId) {
         return res.status(404).json({ error: 'Account not found' });
