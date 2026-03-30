@@ -55,7 +55,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
           <div className="bills-sidebar-container">
             <div className="card" style={{ marginBottom: '20px', background: 'rgba(244, 63, 94, 0.05)', borderLeft: '5px solid var(--danger)' }}>
               <label style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 800 }}>TOTAL MONTHLY BILLS</label>
-              <h2 style={{ fontSize: '2.5rem', margin: '5px 0', color: 'var(--danger)', fontWeight: 900 }} className="currency">${safeFormat(totalBills)}</h2>
+              <h2 style={{ fontSize: '2.5rem', margin: '5px 0', fontWeight: 900 }} className="currency negative">${safeFormat(totalBills)}</h2>
             </div>
             
             <BillForm userId={userId} onBillAdded={loadData} groups={groupNames} />
@@ -77,7 +77,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--danger)', paddingBottom: '15px', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: 'var(--danger)', fontWeight: 800 }}>{group}</h3>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)' }} className="currency">${safeFormat(groupTotal)}</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900 }} className="currency negative">${safeFormat(groupTotal)}</div>
                     </div>
                   </div>
                   
@@ -101,7 +101,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                             <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                               {bill.due_day ? `Day ${bill.due_day}` : '-'}
                             </td>
-                            <td style={{ textAlign: 'right', fontWeight: 800, color: 'var(--danger)', fontSize: '1.05rem' }} className="currency">
+                            <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className="currency negative">
                               ${safeFormat(bill.balance)}
                             </td>
                             <td style={{ textAlign: 'right' }}>

@@ -13,8 +13,24 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
-  const toggleMenu = () => setIsOpen(!isOpen);
-  const closeMenu = () => setIsOpen(false);
+  const handleShare = async () => {
+    const shareData = {
+      title: 'Saphyr Finance Tracker',
+      text: 'Check out Saphyr, a premium personal finance tracker. Track your taxes, assets, and spending with a high-end UI!',
+      url: window.location.origin
+    };
+
+    try {
+      if (navigator.share) {
+        await navigator.share(shareData);
+      } else {
+        await navigator.clipboard.writeText(window.location.origin);
+        alert('App link copied to clipboard!');
+      }
+    } catch (err) {
+      console.log('Error sharing:', err);
+    }
+  };
 
   if (!user) return null;
 
@@ -56,18 +72,34 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
             <Link to="/transactions" className={`nav-link ${location.pathname === '/transactions' ? 'active' : ''}`} onClick={closeMenu}>Transactions</Link>
             <Link to="/trends" className={`nav-link ${location.pathname === '/trends' ? 'active' : ''}`} onClick={closeMenu}>Trends</Link>
             
-            <button 
-              onClick={logout} 
-              style={{ 
-                marginTop: '20px', 
-                background: 'rgba(244, 63, 94, 0.1)', 
-                color: 'var(--danger)', 
-                border: '1px solid rgba(244, 63, 94, 0.2)',
-                boxShadow: 'none'
-              }}
-            >
-              Sign Out
-            </button>
+            <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <button 
+                onClick={handleShare} 
+                style={{ 
+                  background: 'rgba(59, 130, 246, 0.1)', 
+                  color: 'var(--primary)', 
+                  border: '1px solid rgba(59, 130, 246, 0.2)',
+                  boxShadow: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700
+                }}
+              >
+                📤 Share Saphyr
+              </button>
+              <button 
+                onClick={logout} 
+                style={{ 
+                  background: 'rgba(244, 63, 94, 0.1)', 
+                  color: 'var(--danger)', 
+                  border: '1px solid rgba(244, 63, 94, 0.2)',
+                  boxShadow: 'none',
+                  fontSize: '0.85rem',
+                  fontWeight: 700
+                }}
+              >
+                🚪 Sign Out
+              </button>
+            </div>
           </div>
         </div>
       </div>

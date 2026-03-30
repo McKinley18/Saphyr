@@ -7,7 +7,8 @@ interface BillFormProps {
   groups: string[];
 }
 
-const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups }) => {
+const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups: existingGroups }) => {
+  const [isAddingNewGroup, setIsAddingNewGroup] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     type: 'Utility',
@@ -17,9 +18,20 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups }) => {
     due_day: ''
   });
 
+  // Load custom groups from memory
+  const [savedGroups, setSavedGroups] = useState<string[]>(() => {
+    const memory = localStorage.getItem(`saphyr_bill_groups_${userId}`);
+    return memory ? JSON.parse(memory) : ['Monthly Bills', 'Living Expenses', 'Debt Payments'];
+  });
+
+  // Combine unique groups
+  const allGroups = Array.from(new Set([...existingGroups, ...savedGroups])).sort();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const finalGroupName = formData.group_name || 'Uncategorized';
+
       await createAccount({ 
         user_id: userId,
         name: formData.name,
@@ -27,10 +39,19 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups }) => {
         balance: parseFloat(formData.balance) || 0,
         apr: (parseFloat(formData.apr) || 0) / 100,
         is_bill: true,
-        group_name: formData.group_name || 'Uncategorized',
+        group_name: finalGroupName,
         due_day: parseInt(formData.due_day) || null
       });
+
+      // Save to memory
+      if (!savedGroups.includes(finalGroupName)) {
+        const updated = [...savedGroups, finalGroupName];
+        setSavedGroups(updated);
+        localStorage.setItem(`saphyr_bill_groups_${userId}`, JSON.stringify(updated));
+      }
+
       setFormData({ ...formData, name: '', balance: '', due_day: '', apr: '' });
+      setIsAddingNewGroup(false);
       onBillAdded();
     } catch (err) {
       console.error("Failed to add bill:", err);
@@ -39,7 +60,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups }) => {
 
   return (
     <div className="card" style={{ borderLeft: '4px solid #ef4444' }}>
-      <h3>Add New Recurring Bill</h3>
+      <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>Add New Recurring Bill</h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Bill Name</label>
@@ -60,14 +81,40 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups }) => {
             </select>
           </div>
           <div className="form-group">
-            <label>Group</label>
-            <input list="bill-groups" value={formData.group_name} onChange={e => setFormData({...formData, group_name: e.target.value})} />
-            <datalist id="bill-groups">
-              {groups.map(g => <option key={g} value={g} />)}
-              <option value="Monthly Bills" />
-              <option value="Living Expenses" />
-              <option value="Debt Payments" />
-            </datalist>
+            <label>Bill Group</label>
+            {!isAddingNewGroup ? (
+              <select 
+                value={formData.group_name} 
+                onChange={e => {
+                  if (e.target.value === 'ADD_NEW') {
+                    setIsAddingNewGroup(true);
+                    setFormData({...formData, group_name: ''});
+                  } else {
+                    setFormData({...formData, group_name: e.target.value});
+                  }
+                }}
+              >
+                {allGroups.map(g => <option key={g} value={g}>{g}</option>)}
+                <option value="ADD_NEW" style={{ fontWeight: 'bold', color: 'var(--primary)' }}>+ Add New Group...</option>
+              </select>
+            ) : (
+              <div style={{ position: 'relative' }}>
+                <input 
+                  autoFocus 
+                  placeholder="New Group Name" 
+                  value={formData.group_name} 
+                  onChange={e => setFormData({...formData, group_name: e.target.value})} 
+                />
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setIsAddingNewGroup(false);
+                    setFormData({...formData, group_name: allGroups[0] || 'Monthly Bills'});
+                  }}
+                  style={{ position: 'absolute', right: '5px', top: '5px', padding: '5px 10px', width: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', boxShadow: 'none' }}
+                >&times;</button>
+              </div>
+            )}
           </div>
         </div>
 

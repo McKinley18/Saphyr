@@ -84,7 +84,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
   };
 
   return (
-    <div className="accounts-page">
+    <div className="accounts-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="accounts" title="Cash Accounts">
         <p>This page is for tracking your liquid assets and specific savings goals.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -95,11 +95,11 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
       </UserGuide>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
-        <section>
-          <div className="account-sidebar-container">
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="account-sidebar-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <AccountForm userId={userId} onAccountAdded={loadData} groups={groupNames} />
             
-            <div className="card" style={{ marginTop: '20px', borderLeft: '5px solid #8b5cf6' }}>
+            <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                 <h3 style={{ margin: 0, color: '#a78bfa' }}>Savings Envelopes</h3>
                 {!showAddGoal ? (
@@ -149,7 +149,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
           </div>
         </section>
 
-        <section>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {groupNames.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
               <p>No liquid accounts added yet. Add your Checking and Savings accounts on the left.</p>
@@ -160,11 +160,11 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
               const totalBalance = groupAccounts.reduce((sum: number, acc: any) => sum + parseFloat(acc.balance || '0'), 0);
 
               return (
-                <div key={group} className="card" style={{ marginBottom: '25px', position: 'relative' }}>
+                <div key={group} className="card" style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--primary)', paddingBottom: '15px', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: 'var(--primary)', fontWeight: 800 }}>{group}</h3>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--text)' }} className="currency">${safeFormat(totalBalance)}</div>
+                      <div style={{ fontSize: '1.25rem', fontWeight: 900 }} className={`currency ${totalBalance >= 0 ? 'positive' : 'negative'}`}>${safeFormat(totalBalance)}</div>
                     </div>
                   </div>
                   
@@ -187,7 +187,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
                                 <strong style={{ color: 'var(--text)', fontSize: '1rem' }}>{acc.name}</strong>
                               </td>
                               <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{acc.type}</td>
-                              <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className="currency">
+                              <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className={`currency ${parseFloat(acc.balance) >= 0 ? 'positive' : 'negative'}`}>
                                 ${safeFormat(acc.balance)}
                               </td>
                               <td style={{ textAlign: 'right' }}>

@@ -85,7 +85,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const nextMajorBill = allUpcomingBills[0];
 
   return (
-    <div className="dashboard" style={{ maxWidth: '800px', margin: '0 auto' }}>
+    <div className="dashboard" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="dashboard" title="Dashboard">
         <p>Your financial command center. Here's how to read this page:</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -97,9 +97,9 @@ const Dashboard: React.FC<DashboardProps> = ({
       </UserGuide>
 
       {/* 2. Main Budget Remainder */}
-      <div className="card highlight" style={{ borderLeft: '5px solid var(--primary)', marginBottom: '20px' }}>
+      <div className="card highlight" style={{ borderLeft: '5px solid var(--primary)' }}>
         <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>MONTHLY BUDGET REMAINDER (AFTER BILLS)</label>
-        <h2 style={{ fontSize: '3rem', margin: '15px 0' }} className={`currency ${remainingBudget >= 0 ? 'amount-income' : 'amount-expense'}`}>
+        <h2 style={{ fontSize: '3rem', margin: '15px 0' }} className={`currency ${remainingBudget >= 0 ? 'positive' : 'negative'}`}>
           ${safeFormat(remainingBudget)}
         </h2>
         
@@ -115,7 +115,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* 3. Bills & Obligations Summary (PERMANENT BOX) */}
-      <div className="card" style={{ marginBottom: '20px', borderLeft: '5px solid #8b5cf6' }}>
+      <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0, color: 'var(--text)', fontWeight: 800 }}>Bills & Obligations</h3>
           <span style={{ fontSize: '0.75rem', background: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '4px 12px', borderRadius: '20px', fontWeight: 700 }}>{totalBillCount} Total Bills</span>
@@ -154,30 +154,30 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
       {/* 4. Financial Snapshot */}
-      <div className="card" style={{ marginBottom: '20px', borderLeft: '5px solid var(--text-muted)' }}>
+      <div className="card" style={{ borderLeft: '5px solid var(--text-muted)' }}>
         <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800, color: 'var(--text)' }}>Financial Snapshot</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
           <div style={{ padding: '18px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
             <label style={{ fontSize: '0.75rem', color: 'var(--success)', fontWeight: 800 }}>TOTAL CASH</label>
-            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--success)' }} className="currency">${safeFormat(totalCash)}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900 }} className="currency positive">${safeFormat(totalCash)}</div>
           </div>
           <div style={{ padding: '18px', background: 'rgba(244, 63, 94, 0.08)', borderRadius: '16px', border: '1px solid rgba(244, 63, 94, 0.1)' }}>
             <label style={{ fontSize: '0.75rem', color: 'var(--danger)', fontWeight: 800 }}>TOTAL DEBT/BILLS</label>
-            <div style={{ fontSize: '1.6rem', fontWeight: 900, color: 'var(--danger)' }} className="currency">${safeFormat(totalDebt)}</div>
+            <div style={{ fontSize: '1.6rem', fontWeight: 900 }} className="currency negative">${safeFormat(totalDebt)}</div>
           </div>
         </div>
         
         <div className="account-item">
           <span style={{ fontWeight: 600 }}>Net Worth (Cash - Debt)</span>
-          <span style={{ fontWeight: 900, fontSize: '1.3rem' }} className={`currency ${netWorth >= 0 ? 'amount-income' : 'amount-expense'}`}>${safeFormat(netWorth)}</span>
+          <span style={{ fontWeight: 900, fontSize: '1.3rem' }} className={`currency ${netWorth >= 0 ? 'positive' : 'negative'}`}>${safeFormat(netWorth)}</span>
         </div>
         <div className="account-item">
           <span>Total Monthly Inflow</span>
-          <span style={{ fontWeight: 700 }} className="currency">${safeFormat(monthlyNetPay + totalAdditionalMonthly)}</span>
+          <span style={{ fontWeight: 700 }} className="currency positive">${safeFormat(monthlyNetPay + totalAdditionalMonthly)}</span>
         </div>
         <div className="account-item">
           <span>Monthly Bills</span>
-          <span style={{ color: 'var(--danger)', fontWeight: 700 }} className="currency">-${safeFormat(monthlyBills)}</span>
+          <span style={{ fontWeight: 700 }} className="currency negative">-${safeFormat(monthlyBills)}</span>
         </div>
       </div>
 
@@ -196,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({
                   <div style={{ fontWeight: 700, fontSize: '1rem' }}>{tx.category}</div>
                   <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{tx.date ? tx.date.split('T')[0] : ''} • {tx.description || 'No description'}</div>
                 </div>
-                <span className={`currency ${tx.type === 'income' ? 'amount-income' : 'amount-expense'}`} style={{ fontSize: '1.15rem', fontWeight: 800 }}>
+                <span className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`} style={{ fontSize: '1.15rem', fontWeight: 800 }}>
                   {tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}
                 </span>
               </div>

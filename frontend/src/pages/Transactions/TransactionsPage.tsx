@@ -117,7 +117,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
         <div>
           <h2 style={{ margin: 0, color: 'var(--text)', fontSize: '2rem' }}>Daily Activity</h2>
           <p style={{ fontSize: '1rem', color: 'var(--text-muted)', marginTop: '10px', fontWeight: 600 }}>
-            Budget Allowance: <strong className="currency" style={{ color: 'var(--success)', fontWeight: 800 }}>${safeFormat(startingBudget)}</strong> <span style={{ opacity: 0.7 }}>(After Bills)</span>
+            Budget Allowance: <strong className="currency positive" style={{ fontWeight: 800 }}>${safeFormat(startingBudget)}</strong> <span style={{ opacity: 0.7 }}>(After Bills)</span>
           </p>
         </div>
         <div style={{ display: 'flex', gap: '12px', width: '100%', maxWidth: '400px', justifyContent: 'center' }}>
@@ -232,7 +232,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
                             {budget && <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>📦 {budget.name}</div>}
                           </td>
                           <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{acc?.name || 'Unknown'}</td>
-                          <td style={{ textAlign: 'right', color: 'var(--danger)', fontWeight: 800, fontSize: '1.05rem' }} className="currency">
+                          <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className="currency negative">
                             -${safeFormat(tx.amount)}
                           </td>
                         </tr>

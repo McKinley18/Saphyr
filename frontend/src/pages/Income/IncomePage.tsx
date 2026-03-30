@@ -77,7 +77,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
   );
 
   return (
-    <div className="income-page" style={{ maxWidth: '900px', margin: '0 auto' }}>
+    <div className="income-page" style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="income" title="Income">
         <p>This tab is where you define your total monthly cash inflow. Accuracy here is key for your overall budget.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -88,10 +88,10 @@ const IncomePage: React.FC<IncomePageProps> = ({
         </ul>
       </UserGuide>
 
-      <h2 style={{ marginBottom: '30px' }}>Income Management</h2>
+      <h2 style={{ margin: 0 }}>Income Management</h2>
       
       {/* 1. Primary Annual Salary */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)', marginBottom: '30px' }}>
+      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
         <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)', fontSize: '1.1rem' }}>1. Primary Annual Salary</h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Set your gross income and filing status for 2025.</p>
         
@@ -130,7 +130,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
       </div>
 
       {/* 2. Additional Income Sources */}
-      <div className="card" style={{ marginBottom: '30px', borderLeft: '5px solid var(--primary)' }}>
+      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
           <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.1rem' }}>2. Additional Income</h3>
           {!showAddSource ? (
@@ -171,7 +171,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
             {incomeSources.map(src => (
               <div key={src.id} style={{ padding: '12px 20px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
                 <strong style={{ fontSize: '0.9rem' }}>{src.name}</strong>
-                <span className="currency" style={{ color: 'var(--success)', fontWeight: 800 }}>+${safeFormat(src.amount)}</span>
+                <span className="currency positive" style={{ fontSize: '1rem' }}>+${safeFormat(src.amount)}</span>
                 <button 
                   onClick={() => handleDeleteSource(src.id, src.name)}
                   style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0 0 5px', width: 'auto', marginTop: 0, boxShadow: 'none' }}
@@ -183,7 +183,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
       </div>
 
       {/* 3. Automated Tax Assessment */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)', marginBottom: '30px' }}>
+      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
         <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)', fontSize: '1.1rem' }}>3. Tax Assessment (2025)</h3>
         <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Estimates based on your "{taxProfile.filing_status.replace('_', ' ')}" status.</p>
         <TaxEstimator refreshTrigger={0} showTitle={false} />
@@ -195,15 +195,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
             <span style={{ fontWeight: 600 }}>Base Salary (After Tax/401k)</span>
-            <span style={{ fontWeight: 700, color: 'var(--text)' }} className="currency">${safeFormat(baseMonthlyNet)}</span>
+            <span style={{ fontWeight: 700 }} className="currency positive">${safeFormat(baseMonthlyNet)}</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
             <span style={{ fontWeight: 600 }}>Additional Income</span>
-            <span style={{ fontWeight: 700, color: 'var(--text)' }} className="currency">+${safeFormat(totalAdditionalMonthly)}</span>
+            <span style={{ fontWeight: 700 }} className="currency positive">+${safeFormat(totalAdditionalMonthly)}</span>
           </div>
           <div style={{ borderTop: '2px solid var(--border)', paddingTop: '20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>Final Monthly Net</span>
-            <span style={{ color: 'var(--success)', fontSize: '2.5rem', fontWeight: 900 }} className="currency">${safeFormat(totalMonthlyNet)}</span>
+            <span style={{ fontSize: '2.5rem', fontWeight: 900 }} className="currency positive">${safeFormat(totalMonthlyNet)}</span>
           </div>
         </div>
       </div>
