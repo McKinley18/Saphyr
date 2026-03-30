@@ -26,6 +26,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const { isPrivacyMode } = useAuth();
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [newBudget, setNewBudget] = useState({ name: '', limit: '' });
+  const [searchQuery, setSearchQuery] = useState('');
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -42,6 +43,15 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
       loadData();
     }
   };
+
+  const filteredTransactions = (transactions || []).filter(tx => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (tx.category?.toLowerCase().includes(query)) ||
+      (tx.description?.toLowerCase().includes(query)) ||
+      (tx.amount?.toString().includes(query))
+    );
+  });
 
   const monthlyBills = (accounts || [])
     .filter(acc => acc && acc.is_bill)
@@ -220,8 +230,21 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
         </section>
 
         <section>
-          <div className="card">
-            <h3 style={{ color: 'var(--text)', marginBottom: '25px', fontWeight: 800 }}>Recent Purchases</h3>
+          <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
+              <h3 style={{ color: 'var(--text)', margin: 0, fontWeight: 800 }}>Recent Activity</h3>
+              <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
+                <input 
+                  type="text" 
+                  placeholder="Search transactions..." 
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  style={{ paddingLeft: '40px', fontSize: '0.9rem' }}
+                />
+                <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
+              </div>
+            </div>
+
             <div className="table-container">
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
@@ -233,10 +256,12 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
                   </tr>
                 </thead>
                 <tbody>
-                  {(transactions || [])
+                  {filteredTransactions
                     .filter(tx => {
                       if (!tx || !tx.date) return false;
                       const d = new Date(tx.date);
+                      // If searching, show all matches regardless of month
+                      if (searchQuery) return true;
                       return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense';
                     })
                     .map(tx => {

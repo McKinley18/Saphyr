@@ -99,8 +99,31 @@ const Dashboard: React.FC<DashboardProps> = ({
   const totalBillCount = (accounts || []).filter(acc => acc.is_bill).length;
   const nextMajorBill = allUpcomingBills[0];
 
+  const isNewUser = (accounts || []).length === 0;
+
   return (
     <div className="dashboard" style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {isNewUser && (
+        <div className="card" style={{ border: '2px solid var(--primary)', background: 'rgba(59, 130, 246, 0.05)', animation: 'pulse 3s infinite' }}>
+          <h2 style={{ color: 'var(--primary)', marginBottom: '15px' }}>💎 Welcome to Saphyr!</h2>
+          <p style={{ marginBottom: '20px', lineHeight: '1.6' }}>You're one step away from financial clarity. Since your dashboard is fresh, here's how to get set up:</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>1</div>
+              <div>Go to the <strong>Income</strong> tab to set your 2025 salary.</div>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>2</div>
+              <div>Add your Checking/Savings in the <strong>Accounts</strong> tab.</div>
+            </div>
+            <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+              <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>3</div>
+              <div>Log your first purchase using the <strong>(+) Button</strong> below!</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <UserGuide guideKey="dashboard" title="Dashboard">
         <p>Your financial command center. Here's how to read this page:</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>

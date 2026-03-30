@@ -95,8 +95,49 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Preferences */}
-      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+      {/* 2. Privacy & Peace of Mind */}
+      <div className="card" style={{ borderLeft: '5px solid var(--success)', background: 'rgba(34, 197, 94, 0.02)' }}>
+        <h3 style={{ color: 'var(--success)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>🛡️</span> Privacy & Peace of Mind
+        </h3>
+        <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--text)' }}>
+          <p style={{ marginBottom: '10px' }}><strong>Saphyr is a 100% manual tracker.</strong></p>
+          <ul style={{ paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            <li>We <strong>never</strong> ask for bank logins, account numbers, or SSNs.</li>
+            <li>Your data is isolated to your private account and encrypted in transit.</li>
+            <li>Since no real accounts are linked, your actual financial assets are never at risk.</li>
+          </ul>
+        </div>
+      </div>
+
+      {/* 3. Install App */}
+      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
+        <h3 style={{ color: 'var(--primary)', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>📲</span> Install Saphyr
+        </h3>
+        <div style={{ fontSize: '0.9rem', lineHeight: '1.6', color: 'var(--text)' }}>
+          <p style={{ marginBottom: '15px' }}>Save Saphyr to your home screen or desktop for a full-screen, native app experience.</p>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <strong style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', textTransform: 'uppercase' }}>For iPhone / Safari</strong>
+              <div style={{ fontSize: '0.85rem' }}>Tap the <strong>Share</strong> button (box with arrow) and scroll down to <strong>"Add to Home Screen."</strong></div>
+            </div>
+            
+            <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <strong style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', textTransform: 'uppercase' }}>For Android / Chrome</strong>
+              <div style={{ fontSize: '0.85rem' }}>Tap the <strong>Three Dots</strong> in the corner and select <strong>"Install App"</strong> or <strong>"Add to Home Screen."</strong></div>
+            </div>
+
+            <div style={{ padding: '12px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <strong style={{ display: 'block', marginBottom: '5px', fontSize: '0.8rem', textTransform: 'uppercase' }}>For Desktop (Chrome/Edge)</strong>
+              <div style={{ fontSize: '0.85rem' }}>Look for the <strong>Install Icon</strong> (a small computer with an arrow) in your browser's address bar.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. Preferences */}
         <h3 style={{ color: 'var(--text)', margin: 0 }}>App Preferences</h3>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
