@@ -1,4 +1,5 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { useAuth } from '../../context/AuthContext';
 import { deleteTransaction } from '../../services/api';
@@ -20,6 +21,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   loadData
 }) => {
   const { isPrivacyMode, togglePrivacyMode } = useAuth();
+  const navigate = useNavigate();
 
   // Helper for safe formatting with Privacy Masking
   const safeFormat = (val: any) => {
@@ -40,6 +42,10 @@ const Dashboard: React.FC<DashboardProps> = ({
   const currentMonth = now.getMonth();
   const today = now.getDate();
 
+  // Days left in month
+  const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  const daysRemainingInMonth = lastDayOfMonth - today + 1;
+
   const monthlyBills = (accounts || [])
     .filter(acc => acc && acc.is_bill)
     .reduce((sum, acc) => sum + Math.abs(parseFloat(acc.balance || '0')), 0);
@@ -49,7 +55,6 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const monthlyNetPay = parseFloat(taxEstimate?.monthly_net || '0');
   
-  // Starting budget is now explicitly Money after Income minus ALL Bills
   const startingBudget = monthlyNetPay + totalAdditionalMonthly - monthlyBills;
 
   const totalSpentThisMonth = (transactions || [])
@@ -62,6 +67,9 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const remainingBudget = startingBudget - totalSpentThisMonth;
   const spendingProgress = startingBudget > 0 ? Math.min(100, (totalSpentThisMonth / startingBudget) * 100) : 0;
+
+  // DAILY SPENDING POWER
+  const dailySpendingPower = Math.max(0, remainingBudget / daysRemainingInMonth);
 
   const totalCash = (accounts || [])
     .filter(acc => acc && !acc.is_bill && (['Checking', 'Savings', 'Cash Accounts'].includes(acc.type) || acc.group_name === 'Cash Accounts' || parseFloat(acc.balance || '0') > 0))
@@ -135,11 +143,18 @@ const Dashboard: React.FC<DashboardProps> = ({
       </UserGuide>
 
       {/* 2. Main Budget Remainder */}
-      <div className="card highlight" style={{ borderLeft: '5px solid var(--primary)', position: 'relative' }}>
+      <div 
+        className="card highlight" 
+        onClick={() => navigate('/transactions')}
+        style={{ borderLeft: '5px solid var(--primary)', position: 'relative', cursor: 'pointer' }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>MONTHLY BUDGET REMAINDER (AFTER BILLS)</label>
           <button 
-            onClick={togglePrivacyMode}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePrivacyMode();
+            }}
             style={{ width: 'auto', background: 'none', border: 'none', boxShadow: 'none', padding: 0, marginTop: 0, fontSize: '1.2rem', cursor: 'pointer', opacity: 0.6 }}
             title={isPrivacyMode ? "Show balances" : "Hide balances"}
           >
@@ -149,6 +164,17 @@ const Dashboard: React.FC<DashboardProps> = ({
         <h2 style={{ fontSize: '3rem', margin: '15px 0' }} className={`currency ${remainingBudget >= 0 ? 'positive' : 'negative'}`}>
           ${safeFormat(remainingBudget)}
         </h2>
+
+        <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+          <div style={{ flex: 1, padding: '12px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800, textTransform: 'uppercase' }}>Daily Spending Power</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900 }} className="currency positive">${safeFormat(dailySpendingPower)}<span style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 600 }}> / day</span></div>
+          </div>
+          <div style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+            <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>Month Progress</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{((today / lastDayOfMonth) * 100).toFixed(0)}%</div>
+          </div>
+        </div>
         
         <div style={{ marginTop: '25px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.9rem' }}>
@@ -162,7 +188,11 @@ const Dashboard: React.FC<DashboardProps> = ({
       </div>
 
       {/* 3. Bills & Obligations Summary (PERMANENT BOX) */}
-      <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
+      <div 
+        className="card" 
+        onClick={() => navigate('/bills')}
+        style={{ borderLeft: '5px solid #8b5cf6', cursor: 'pointer' }}
+      >
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0, color: 'var(--text)', fontWeight: 800 }}>Bills & Obligations</h3>
           <span style={{ fontSize: '0.75rem', background: 'rgba(139, 92, 246, 0.1)', color: '#a78bfa', padding: '4px 12px', borderRadius: '20px', fontWeight: 700 }}>{totalBillCount} Total Bills</span>
@@ -201,7 +231,11 @@ const Dashboard: React.FC<DashboardProps> = ({
 
 
       {/* 4. Financial Snapshot */}
-      <div className="card" style={{ borderLeft: '5px solid var(--text-muted)' }}>
+      <div 
+        className="card" 
+        onClick={() => navigate('/accounts')}
+        style={{ borderLeft: '5px solid var(--text-muted)', cursor: 'pointer' }}
+      >
         <h3 style={{ fontSize: '1.1rem', marginBottom: '20px', fontWeight: 800, color: 'var(--text)' }}>Financial Snapshot</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
           <div style={{ padding: '18px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: '16px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
