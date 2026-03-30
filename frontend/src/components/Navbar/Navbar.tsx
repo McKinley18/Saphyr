@@ -13,6 +13,9 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
 
+  const toggleMenu = () => setIsOpen(!isOpen);
+  const closeMenu = () => setIsOpen(false);
+
   const handleShare = async () => {
     const shareData = {
       title: 'Saphyr Finance Tracker',
@@ -88,7 +91,10 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
                 📤 Share Saphyr
               </button>
               <button 
-                onClick={logout} 
+                onClick={() => {
+                  closeMenu();
+                  logout();
+                }} 
                 style={{ 
                   background: 'rgba(244, 63, 94, 0.1)', 
                   color: 'var(--danger)', 
