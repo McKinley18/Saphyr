@@ -1,0 +1,242 @@
+import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import './App.css';
+import { 
+  fetchAccounts, 
+  fetchTransactions, 
+  fetchSalaryProfile, 
+  updateSalaryProfile, 
+  fetchTaxEstimate, 
+  fetchBudgets, 
+  fetchIncomeSources,
+  fetchSnapshots,
+  createSnapshot,
+  fetchGoals
+} from './services/api';
+import Navbar from './components/Navbar/Navbar';
+import QuickLog from './components/QuickLog/QuickLog';
+import Dashboard from './pages/Dashboard/Dashboard';
+import AccountsPage from './pages/Accounts/AccountsPage';
+import BillsPage from './pages/Bills/BillsPage';
+import TransactionsPage from './pages/Transactions/TransactionsPage';
+import IncomePage from './pages/Income/IncomePage';
+import TrendsPage from './pages/Trends/TrendsPage';
+import LoginPage from './pages/Auth/LoginPage';
+import SignupPage from './pages/Auth/SignupPage';
+import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
+import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import { AuthProvider, useAuth } from './context/AuthContext';
+
+function AppContent() {
+  const [accounts, setAccounts] = useState<any[]>([]);
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [budgets, setBudgets] = useState<any[]>([]);
+  const [incomeSources, setIncomeSources] = useState<any[]>([]);
+  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const [goals, setGoals] = useState<any[]>([]);
+  const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0 });
+  const [taxEstimate, setTaxEstimate] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  
+  const { user } = useAuth();
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+  };
+
+  useEffect(() => {
+    window.onerror = function(message, _source, lineno) {
+      alert(`RUNTIME ERROR: ${message} at line ${lineno}`);
+      return false;
+    };
+  }, []);
+
+  const loadData = async () => {
+    if (!user) return;
+    
+    try {
+      const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = await Promise.all([
+        fetchAccounts(),
+        fetchTransactions(),
+        fetchSalaryProfile(),
+        fetchTaxEstimate(),
+        fetchBudgets(),
+        fetchIncomeSources(),
+        fetchSnapshots(),
+        fetchGoals()
+      ]);
+      
+      setAccounts(accs || []);
+      setTransactions(txs || []);
+      setSalary(sal || { annual_salary: 0, '401k_percent': 0 });
+      setTaxEstimate(tax);
+      setBudgets(bdgs || []);
+      setIncomeSources(incSrcs || []);
+      setSnapshots(snps || []);
+      setGoals(gls || []);
+      setError(null);
+
+      // Daily Snapshot Capture
+      if (accs && accs.length > 0) {
+        const totalCash = accs
+          .filter((a: any) => !a.is_bill && (['Checking', 'Savings', 'Cash Accounts'].includes(a.type) || a.group_name === 'Cash Accounts' || parseFloat(a.balance) > 0))
+          .reduce((sum: number, a: any) => sum + parseFloat(a.balance), 0);
+        const totalDebt = accs
+          .filter((a: any) => a.is_bill || ['Credit Card', 'Loan'].includes(a.type) || parseFloat(a.balance) < 0)
+          .reduce((sum: number, a: any) => sum + Math.abs(parseFloat(a.balance)), 0);
+        
+        await createSnapshot({
+          net_worth: totalCash - totalDebt,
+          total_cash: totalCash,
+          total_debt: totalDebt
+        });
+      }
+    } catch (e: any) {
+      console.error("Failed to load data", e);
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [user]);
+
+  const handleSalarySubmit = async (e: any) => {
+    e.preventDefault();
+    try {
+      await updateSalaryProfile({
+        annual_salary: salary.annual_salary,
+        contribution_401k_percent: salary['401k_percent']
+      });
+      await loadData();
+    } catch (err: any) {
+      setError("Failed to update salary: " + err.message);
+    }
+  };
+
+  if (loading) return <div className="container" style={{ padding: '100px', textAlign: 'center' }}><h3>Saphyr is loading...</h3></div>;
+
+  if (error && user) {
+    return (
+      <div className="container" style={{ padding: '50px' }}>
+        <div className="card" style={{ border: '2px solid red', textAlign: 'center' }}>
+          <h2 style={{ color: 'red' }}>⚠️ Connection Error</h2>
+          <p>We couldn't connect to the database. Make sure your server is running.</p>
+          <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Error: {error}</p>
+          <button onClick={() => window.location.reload()} style={{ width: 'auto', marginTop: '20px' }}>Retry Connection</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Router>
+      <Navbar theme={theme} toggleTheme={toggleTheme} />
+      <div className="container">
+        <Routes>
+          <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
+          <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          
+          <Route path="/" element={
+            <ProtectedRoute>
+              <Dashboard 
+                taxEstimate={taxEstimate}
+                accounts={accounts}
+                transactions={transactions}
+                incomeSources={incomeSources}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/income" element={
+            <ProtectedRoute>
+              <IncomePage 
+                userId={user?.id}
+                salary={salary}
+                setSalary={setSalary}
+                taxEstimate={taxEstimate}
+                accounts={accounts}
+                incomeSources={incomeSources}
+                handleSalarySubmit={handleSalarySubmit}
+                loadData={loadData}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/accounts" element={
+            <ProtectedRoute>
+              <AccountsPage 
+                userId={user?.id}
+                accounts={accounts}
+                goals={goals}
+                loadData={loadData}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/bills" element={
+            <ProtectedRoute>
+              <BillsPage 
+                userId={user?.id}
+                accounts={accounts}
+                loadData={loadData}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/transactions" element={
+            <ProtectedRoute>
+              <TransactionsPage 
+                userId={user?.id}
+                accounts={accounts}
+                transactions={transactions}
+                budgets={budgets}
+                taxEstimate={taxEstimate}
+                incomeSources={incomeSources}
+                loadData={loadData}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/trends" element={
+            <ProtectedRoute>
+              <TrendsPage 
+                snapshots={snapshots}
+                transactions={transactions}
+                budgets={budgets}
+              />
+            </ProtectedRoute>
+          } />
+        </Routes>
+      </div>
+      {user && (
+        <QuickLog 
+          accounts={accounts} 
+          budgets={budgets} 
+          onTransactionAdded={loadData} 
+        />
+      )}
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
+  );
+}
+
+export default App;
