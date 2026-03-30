@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import db from '../database/db.js';
 import { EmailService } from '../services/EmailService.js';
+import { AuthRequest } from '../middleware/authMiddleware.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'saphyr-secret-key-2025';
 
@@ -62,18 +63,51 @@ export class AuthController {
     }
   }
 
+  static async updatePassword(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      const { currentPassword, newPassword } = req.body;
+
+      const user = await db('users').where({ id: userId }).first();
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
+      }
+
+      const isValid = await bcrypt.compare(currentPassword, user.password_hash);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Current password incorrect' });
+      }
+
+      const newHash = await bcrypt.hash(newPassword, 10);
+      await db('users').where({ id: userId }).update({ password_hash: newHash });
+
+      res.json({ message: 'Password updated successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async deleteAccount(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      await db('users').where({ id: userId }).del();
+      res.json({ message: 'Account deleted' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   static async forgotPassword(req: Request, res: Response) {
     try {
       const { email } = req.body;
       const user = await db('users').where({ email }).first();
 
       if (!user) {
-        // Don't reveal user existence for security, just send success
         return res.json({ message: 'If an account exists, a reset link has been sent' });
       }
 
       const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
 
       await db('users').where({ id: user.id }).update({
         reset_token: resetToken,

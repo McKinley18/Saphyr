@@ -64,6 +64,12 @@ const SignupPage: React.FC = () => {
           </div>
         )}
 
+        {loading && (
+          <div style={{ textAlign: 'center', marginBottom: '20px', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, animation: 'pulse 2s infinite' }}>
+            ⏳ Waking up the secure server... (This takes ~30s if idle)
+          </div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="form-group">
             <label>Full Name</label>

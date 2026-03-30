@@ -6,6 +6,8 @@ interface AuthContextType {
   login: (user: any, token: string) => void;
   logout: () => void;
   loading: boolean;
+  isPrivacyMode: boolean;
+  togglePrivacyMode: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,6 +16,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<any | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isPrivacyMode, setIsPrivacyMode] = useState(
+    localStorage.getItem('saphyr_privacy_mode') === 'true'
+  );
 
   useEffect(() => {
     const savedUser = localStorage.getItem('saphyr_user');
@@ -41,8 +46,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     window.location.href = '/login';
   };
 
+  const togglePrivacyMode = () => {
+    setIsPrivacyMode(prev => {
+      const newValue = !prev;
+      localStorage.setItem('saphyr_privacy_mode', newValue.toString());
+      return newValue;
+    });
+  };
+
   return (
-    <AuthContext.Provider value={{ user, token, login, logout, loading }}>
+    <AuthContext.Provider value={{ user, token, login, logout, loading, isPrivacyMode, togglePrivacyMode }}>
       {children}
     </AuthContext.Provider>
   );

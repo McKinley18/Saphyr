@@ -21,6 +21,7 @@ import BillsPage from './pages/Bills/BillsPage';
 import TransactionsPage from './pages/Transactions/TransactionsPage';
 import IncomePage from './pages/Income/IncomePage';
 import TrendsPage from './pages/Trends/TrendsPage';
+import SettingsPage from './pages/Settings/SettingsPage';
 import LoginPage from './pages/Auth/LoginPage';
 import SignupPage from './pages/Auth/SignupPage';
 import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
@@ -160,6 +161,7 @@ function AppContent() {
                 accounts={accounts}
                 transactions={transactions}
                 incomeSources={incomeSources}
+                loadData={loadData}
               />
             </ProtectedRoute>
           } />
@@ -216,6 +218,11 @@ function AppContent() {
                 transactions={transactions}
                 budgets={budgets}
               />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
             </ProtectedRoute>
           } />
         </Routes>

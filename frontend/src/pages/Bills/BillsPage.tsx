@@ -2,6 +2,7 @@ import React from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import BillForm from '../../components/BillForm/BillForm';
 import { deleteAccount } from '../../services/api';
+import { getOrdinal } from '../../services/utils';
 
 interface BillsPageProps {
   userId: string;
@@ -39,7 +40,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
   };
 
   return (
-    <div className="bills-page">
+    <div className="bills-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="bills" title="Bills & Debt">
         <p>Manage your monthly commitments and crush your debt.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -51,9 +52,9 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
       </UserGuide>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
-        <section>
-          <div className="bills-sidebar-container">
-            <div className="card" style={{ marginBottom: '20px', background: 'rgba(244, 63, 94, 0.05)', borderLeft: '5px solid var(--danger)' }}>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+          <div className="bills-sidebar-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="card" style={{ background: 'rgba(244, 63, 94, 0.05)', borderLeft: '5px solid var(--danger)' }}>
               <label style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 800 }}>TOTAL MONTHLY BILLS</label>
               <h2 style={{ fontSize: '2.5rem', margin: '5px 0', fontWeight: 900 }} className="currency negative">${safeFormat(totalBills)}</h2>
             </div>
@@ -62,7 +63,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
           </div>
         </section>
 
-        <section>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           {groupNames.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-muted)' }}>
               <p>No bills added yet. Add your recurring payments on the left.</p>
@@ -73,7 +74,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
               const groupTotal = groupBills.reduce((sum: number, acc: any) => sum + Math.abs(parseFloat(acc.balance || '0')), 0);
 
               return (
-                <div key={group} className="card" style={{ marginBottom: '25px', position: 'relative' }}>
+                <div key={group} className="card" style={{ position: 'relative' }}>
                   <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid var(--danger)', paddingBottom: '15px', marginBottom: '20px' }}>
                     <h3 style={{ margin: 0, color: 'var(--danger)', fontWeight: 800 }}>{group}</h3>
                     <div style={{ textAlign: 'right' }}>
@@ -99,7 +100,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{bill.type}</div>
                             </td>
                             <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                              {bill.due_day ? `Day ${bill.due_day}` : '-'}
+                              {bill.due_day ? getOrdinal(bill.due_day) : '-'}
                             </td>
                             <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className="currency negative">
                               ${safeFormat(bill.balance)}

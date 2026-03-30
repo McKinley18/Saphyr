@@ -44,6 +44,23 @@ export const resetPassword = async (data: any) => {
   return response.json();
 };
 
+export const updatePassword = async (data: any) => {
+  const response = await fetch(`${API_URL}/auth/update-password`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
+export const deleteAccountApi = async () => {
+  const response = await fetch(`${API_URL}/auth/delete-account`, {
+    method: 'DELETE',
+    headers: getHeaders(),
+  });
+  return response.json();
+};
+
 export const fetchAccounts = async () => {
   const response = await fetch(`${API_URL}/accounts`, { headers: getHeaders() });
   return response.json();
@@ -85,6 +102,14 @@ export const createTransaction = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
+export const deleteTransaction = async (id: string) => {
+  const response = await fetch(`${API_URL}/transactions/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
   });
   return response.json();
 };

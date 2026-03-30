@@ -71,6 +71,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
             <Link to="/bills" className={`nav-link ${location.pathname === '/bills' ? 'active' : ''}`} onClick={closeMenu}>Bills</Link>
             <Link to="/transactions" className={`nav-link ${location.pathname === '/transactions' ? 'active' : ''}`} onClick={closeMenu}>Transactions</Link>
             <Link to="/trends" className={`nav-link ${location.pathname === '/trends' ? 'active' : ''}`} onClick={closeMenu}>Trends</Link>
+            <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`} onClick={closeMenu}>Settings</Link>
             
             <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button 

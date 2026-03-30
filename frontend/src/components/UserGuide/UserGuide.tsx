@@ -8,11 +8,19 @@ interface UserGuideProps {
 
 const UserGuide: React.FC<UserGuideProps> = ({ guideKey, title, children }) => {
   const [isVisible, setIsVisible] = useState(true);
+  const [isGlobalHidden, setIsGlobalHidden] = useState(false);
 
   useEffect(() => {
+    // 1. Check master toggle
+    const globalHide = localStorage.getItem('saphyr_hide_all_guides') === 'true';
+    setIsGlobalHidden(globalHide);
+
+    // 2. Check individual key
     const hidden = localStorage.getItem(`hide_guide_${guideKey}`);
-    if (hidden === 'true') {
+    if (hidden === 'true' || globalHide) {
       setIsVisible(false);
+    } else {
+      setIsVisible(true);
     }
   }, [guideKey]);
 
@@ -25,6 +33,8 @@ const UserGuide: React.FC<UserGuideProps> = ({ guideKey, title, children }) => {
     localStorage.removeItem(`hide_guide_${guideKey}`);
     setIsVisible(true);
   };
+
+  if (isGlobalHidden) return null; // Fully hidden if global toggle is on
 
   if (!isVisible) {
     return (

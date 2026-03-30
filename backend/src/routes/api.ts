@@ -22,6 +22,10 @@ router.post('/auth/reset-password', AuthController.resetPassword);
 // Protected Routes (Require JWT)
 router.use(authMiddleware);
 
+// User/Settings Routes
+router.post('/auth/update-password', AuthController.updatePassword);
+router.delete('/auth/delete-account', AuthController.deleteAccount);
+
 // Account Routes
 router.post('/accounts', AccountController.createAccount);
 router.get('/accounts', AccountController.getAccounts);
@@ -48,6 +52,16 @@ router.delete('/accounts/:id', async (req, res) => {
 // Transaction Routes
 router.post('/transactions', TransactionController.createTransaction);
 router.get('/transactions', TransactionController.getTransactions);
+router.delete('/transactions/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).userId;
+    await db('transactions').where({ id, user_id: userId }).del();
+    res.json({ message: 'Transaction deleted' });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // Tax Routes
 router.get('/tax/estimate', TaxController.getEstimate);

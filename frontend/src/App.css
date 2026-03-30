@@ -48,7 +48,7 @@ body {
 .container {
   max-width: 1200px;
   margin: 0 auto;
-  padding-bottom: 120px; /* Buffer for Floating Action Button */
+  padding-bottom: 160px; /* Enhanced Buffer for Floating Action Button */
   animation: fadeUp 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 

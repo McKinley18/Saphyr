@@ -1,11 +1,15 @@
 import React from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
+import { useAuth } from '../../context/AuthContext';
+import { deleteTransaction } from '../../services/api';
+import { getOrdinal } from '../../services/utils';
 
 interface DashboardProps {
   taxEstimate: any;
   accounts: any[];
   transactions: any[];
   incomeSources: any[];
+  loadData?: () => void;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({
@@ -13,11 +17,22 @@ const Dashboard: React.FC<DashboardProps> = ({
   accounts,
   transactions,
   incomeSources,
+  loadData
 }) => {
-  // Helper for safe formatting
+  const { isPrivacyMode, togglePrivacyMode } = useAuth();
+
+  // Helper for safe formatting with Privacy Masking
   const safeFormat = (val: any) => {
+    if (isPrivacyMode) return '••••';
     const num = parseFloat(val || '0');
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const handleDeleteTx = async (id: string, category: string, amount: number) => {
+    if (window.confirm(`Remove transaction: ${category} ($${amount})?`)) {
+      await deleteTransaction(id);
+      if (loadData) loadData();
+    }
   };
 
   const now = new Date();
@@ -97,8 +112,17 @@ const Dashboard: React.FC<DashboardProps> = ({
       </UserGuide>
 
       {/* 2. Main Budget Remainder */}
-      <div className="card highlight" style={{ borderLeft: '5px solid var(--primary)' }}>
-        <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>MONTHLY BUDGET REMAINDER (AFTER BILLS)</label>
+      <div className="card highlight" style={{ borderLeft: '5px solid var(--primary)', position: 'relative' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <label style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 700 }}>MONTHLY BUDGET REMAINDER (AFTER BILLS)</label>
+          <button 
+            onClick={togglePrivacyMode}
+            style={{ width: 'auto', background: 'none', border: 'none', boxShadow: 'none', padding: 0, marginTop: 0, fontSize: '1.2rem', cursor: 'pointer', opacity: 0.6 }}
+            title={isPrivacyMode ? "Show balances" : "Hide balances"}
+          >
+            {isPrivacyMode ? '👁️' : '🕶️'}
+          </button>
+        </div>
         <h2 style={{ fontSize: '3rem', margin: '15px 0' }} className={`currency ${remainingBudget >= 0 ? 'positive' : 'negative'}`}>
           ${safeFormat(remainingBudget)}
         </h2>
@@ -137,7 +161,7 @@ const Dashboard: React.FC<DashboardProps> = ({
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong style={{ fontSize: '1rem' }}>{nextMajorBill.name}</strong>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Due in {nextMajorBill.daysRemaining} days (Day {nextMajorBill.due_day})</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Due in {nextMajorBill.daysRemaining} days ({getOrdinal(nextMajorBill.due_day)})</div>
               </div>
               <span style={{ fontWeight: 900, fontSize: '1.2rem' }} className="currency">${safeFormat(nextMajorBill.balance)}</span>
             </div>
@@ -192,9 +216,17 @@ const Dashboard: React.FC<DashboardProps> = ({
           {(transactions || []).slice(0, 10).map(tx => (
             <div key={tx.id} className="transaction-item" style={{ borderBottom: '1px solid var(--border)', padding: '14px 5px' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <div>
-                  <div style={{ fontWeight: 700, fontSize: '1rem' }}>{tx.category}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{tx.date ? tx.date.split('T')[0] : ''} • {tx.description || 'No description'}</div>
+                <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+                  <button 
+                    onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)}
+                    style={{ width: 'auto', background: 'none', border: 'none', boxShadow: 'none', padding: '5px', marginTop: 0, fontSize: '1rem', cursor: 'pointer', opacity: 0.4 }}
+                  >
+                    🗑️
+                  </button>
+                  <div>
+                    <div style={{ fontWeight: 700, fontSize: '1rem' }}>{tx.category}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', fontWeight: 500 }}>{tx.date ? tx.date.split('T')[0] : ''} • {tx.description || 'No description'}</div>
+                  </div>
                 </div>
                 <span className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`} style={{ fontSize: '1.15rem', fontWeight: 800 }}>
                   {tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}

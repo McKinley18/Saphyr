@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
-import { createBudget, deleteBudget } from '../../services/api';
+import { createBudget, deleteBudget, deleteTransaction } from '../../services/api';
 import TransactionForm from '../../components/TransactionForm/TransactionForm';
+import { useAuth } from '../../context/AuthContext';
 
 interface TransactionsPageProps {
   userId: string;
@@ -22,6 +23,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   incomeSources,
   loadData 
 }) => {
+  const { isPrivacyMode } = useAuth();
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [newBudget, setNewBudget] = useState({ name: '', limit: '' });
 
@@ -29,8 +31,16 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const currentYear = new Date().getFullYear();
 
   const safeFormat = (val: any) => {
+    if (isPrivacyMode) return '••••';
     const num = parseFloat(val || '0');
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const handleDeleteTx = async (id: string, category: string, amount: number) => {
+    if (window.confirm(`Delete transaction: ${category} ($${amount})?`)) {
+      await deleteTransaction(id);
+      loadData();
+    }
   };
 
   const monthlyBills = (accounts || [])
@@ -102,7 +112,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   };
 
   return (
-    <div className="transactions-page">
+    <div className="transactions-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="transactions" title="Daily Activity">
         <p>Log your spending and stay within your limits.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -113,7 +123,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
         </ul>
       </UserGuide>
 
-      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', marginBottom: '40px', gap: '20px' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', margin: '20px 0', gap: '20px' }}>
         <div>
           <h2 style={{ margin: 0, color: 'var(--text)', fontSize: '2rem' }}>Daily Activity</h2>
           <p style={{ fontSize: '1rem', color: 'var(--text-muted)', marginTop: '10px', fontWeight: 600 }}>
@@ -131,7 +141,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
       </div>
 
       {showAddBudget && (
-        <div className="card" style={{ marginBottom: '35px', background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
+        <div className="card" style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid var(--border)' }}>
           <h3 style={{ marginTop: 0, color: 'var(--text)' }}>Create Budget Box</h3>
           <form onSubmit={handleCreateBudget} style={{ display: 'flex', flexWrap: 'wrap', gap: '20px', alignItems: 'flex-end' }}>
             <div className="form-group" style={{ flex: '1 1 200px', marginBottom: 0 }}>
@@ -148,7 +158,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
       )}
 
       {/* Budget Boxes Grid */}
-      <div className="grid" style={{ marginBottom: '45px' }}>
+      <div className="grid" style={{ gap: '20px' }}>
         {(budgets || []).map(budget => {
           const spent = (transactions || [])
             .filter(tx => {
@@ -166,29 +176,37 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
           const progress = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
 
           return (
-            <div key={budget.id} className="card" style={{ position: 'relative', borderTop: `4px solid ${progress > 90 ? 'var(--danger)' : 'var(--primary)'}` }}>
+            <div key={budget.id} className="card" style={{ position: 'relative', borderTop: `4px solid ${progress > 90 ? 'var(--danger)' : 'var(--primary)'}`, padding: '25px' }}>
               <button 
                 onClick={() => handleDeleteBudget(budget.id, budget.name)}
                 style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.4rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}
               >&times;</button>
               
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: 'var(--text)', fontWeight: 700 }}>{budget.name}</h3>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>Limit: <span className="currency">${safeFormat(limit)}</span></div>
-              </div>
-
-              <div style={{ fontSize: '1.75rem', fontWeight: 900, margin: '15px 0', color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }}>
-                <span className="currency">${safeFormat(remaining)}</span>
-                <span style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)', marginLeft: '8px' }}>left</span>
-              </div>
-
-              <div style={{ marginTop: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem' }}>
-                  <span style={{ fontWeight: 600, color: 'var(--text-muted)' }}>Spent: <span className="currency">${safeFormat(spent)}</span></span>
-                  <span style={{ fontWeight: 800, color: progress > 90 ? 'var(--danger)' : 'var(--primary)' }}>{progress.toFixed(0)}%</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', fontWeight: 800 }}>{budget.name}</h3>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.05em' }}>Budget Box</div>
                 </div>
-                <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden' }}>
-                  <div style={{ width: `${progress}%`, height: '100%', background: progress > 90 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: progress > 90 ? '0 0 10px rgba(244, 63, 94, 0.3)' : '0 0 10px rgba(16, 185, 129, 0.3)' }}></div>
+                <div style={{ textAlign: 'right' }}>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Limit</div>
+                  <div style={{ fontSize: '1rem', fontWeight: 800 }} className="currency">${safeFormat(limit)}</div>
+                </div>
+              </div>
+
+              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '10px' }}>Monthly Remaining</div>
+                <div style={{ fontSize: '2.25rem', fontWeight: 900, color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }} className="currency">
+                  ${safeFormat(remaining)}
+                </div>
+              </div>
+
+              <div style={{ marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem' }}>
+                  <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Spent: <span className="currency">${safeFormat(spent)}</span></span>
+                  <span style={{ fontWeight: 900, color: progress > 90 ? 'var(--danger)' : 'var(--primary)' }}>{progress.toFixed(0)}%</span>
+                </div>
+                <div style={{ width: '100%', height: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '7px', overflow: 'hidden' }}>
+                  <div style={{ width: `${progress}%`, height: '100%', background: progress > 90 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: progress > 90 ? '0 0 15px rgba(244, 63, 94, 0.3)' : '0 0 15px rgba(59, 130, 246, 0.3)' }}></div>
                 </div>
               </div>
             </div>
@@ -226,7 +244,15 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
                       const budget = budgets.find(b => b.id === tx.budget_category_id);
                       return (
                         <tr key={tx.id}>
-                          <td style={{ padding: '16px 0', fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{tx.date ? tx.date.split('T')[0] : ''}</td>
+                          <td style={{ padding: '16px 0', display: 'flex', gap: '15px', alignItems: 'center' }}>
+                            <button 
+                              onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)}
+                              style={{ width: 'auto', background: 'none', border: 'none', boxShadow: 'none', padding: '5px', marginTop: 0, fontSize: '1rem', cursor: 'pointer', opacity: 0.4 }}
+                            >
+                              🗑️
+                            </button>
+                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{tx.date ? tx.date.split('T')[0] : ''}</span>
+                          </td>
                           <td>
                             <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem' }}>{tx.category}</div>
                             {budget && <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>📦 {budget.name}</div>}

@@ -42,7 +42,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots, transactions, budget
   }));
 
   return (
-    <div className="trends-page">
+    <div className="trends-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="trends" title="Trends & Analytics">
         <p>Visualize your financial progress and habits over time.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
@@ -52,9 +52,9 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots, transactions, budget
         </ul>
       </UserGuide>
 
-      <h2 style={{ marginBottom: '30px' }}>Trends & Analytics</h2>
+      <h2 style={{ margin: 0 }}>Trends & Analytics</h2>
 
-      <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
+      <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
         {/* Row 1: Net Worth Growth (Full Width) */}
         <div className="card">
           <h3 style={{ color: 'var(--text)', marginBottom: '25px' }}>Net Worth Growth (30 Days)</h3>
