@@ -138,6 +138,7 @@ const SettingsPage: React.FC = () => {
       </div>
 
       {/* 4. Preferences */}
+      <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <h3 style={{ color: 'var(--text)', margin: 0 }}>App Preferences</h3>
         
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -179,7 +180,7 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Security */}
+      {/* 5. Security */}
       <div className="card">
         <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>Security & Password</h3>
         <form onSubmit={handlePasswordUpdate}>
