@@ -28,36 +28,73 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ accounts, budgets, on
   const cashAccounts = (accounts || []).filter(acc => 
     acc && (['Checking', 'Savings', 'Cash Accounts'].includes(acc.type) || acc.group_name === 'Cash Accounts')
   );
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    try {
-      await createTransaction({ 
-        user_id: userId,
-        account_id: formData.account_id,
-        budget_category_id: formData.budget_category_id || null,
-        type: formData.type,
-        amount: parseFloat(formData.amount),
-        category: formData.category,
-        description: formData.description,
-        date: formData.date,
-      });
-      setFormData({ ...formData, amount: '', description: '', category: '', budget_category_id: '' });
-      onTransactionAdded();
-    } catch (err) {
-      console.error("Failed to add transaction:", err);
+  try {
+    await createTransaction({ 
+      user_id: userId,
+      account_id: formData.account_id,
+      budget_category_id: formData.budget_category_id || null,
+      type: formData.type,
+      amount: parseFloat(formData.amount),
+      category: formData.category,
+      description: formData.description,
+      date: formData.date,
+    });
+
+    // SMART MEMORY: Save category/box link for this vendor
+    if (formData.category && formData.type === 'expense') {
+      const memoryKey = `saphyr_memory_${userId}_${formData.category.toLowerCase().trim()}`;
+      const memoryData = {
+        budget_category_id: formData.budget_category_id,
+        account_id: formData.account_id
+      };
+      localStorage.setItem(memoryKey, JSON.stringify(memoryData));
     }
-  };
 
-  return (
-    <div className="card">
-      <h3>Log Transaction</h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Transaction Type</label>
-          <select value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
-            <option value="expense">Purchase / Outflow</option>
+    setFormData({ ...formData, amount: '', description: '', category: '', budget_category_id: '' });
+    onTransactionAdded();
+  } catch (err) {
+    console.error("Failed to add transaction:", err);
+  }
+};
+
+const handleCategoryChange = (val: string) => {
+  setFormData({ ...formData, category: val });
+
+  // SMART MEMORY: Auto-fill if we've seen this vendor before
+  if (val && formData.type === 'expense') {
+    const memoryKey = `saphyr_memory_${userId}_${val.toLowerCase().trim()}`;
+    const saved = localStorage.getItem(memoryKey);
+    if (saved) {
+      const { budget_category_id, account_id } = JSON.parse(saved);
+      setFormData(prev => ({
+        ...prev,
+        category: val,
+        budget_category_id: budget_category_id || prev.budget_category_id,
+        account_id: account_id || prev.account_id
+      }));
+    }
+  }
+};
+
+return (
+  <div className="card">
+    <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>Log Transaction</h3>
+    <form onSubmit={handleSubmit}>
+...
+      <div className="form-group">
+        <label>Category / Vendor</label>
+        <input 
+          type="text" 
+          required 
+          value={formData.category} 
+          onChange={(e) => handleCategoryChange(e.target.value)} 
+          placeholder="e.g. Walmart, Side Job" 
+        />
+      </div>
+
             <option value="income">Deposit / Inflow</option>
           </select>
         </div>
