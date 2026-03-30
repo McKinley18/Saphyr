@@ -98,54 +98,6 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="account-sidebar-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
             <AccountForm userId={userId} onAccountAdded={loadData} groups={groupNames} />
-            
-            <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                <h3 style={{ margin: 0, color: '#a78bfa' }}>Savings Envelopes</h3>
-                {!showAddGoal ? (
-                  <button onClick={() => setShowAddGoal(true)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.75rem', background: '#8b5cf6' }}>+ New Goal</button>
-                ) : (
-                  <button onClick={() => setShowAddGoal(false)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.75rem', background: 'var(--text-muted)' }}>Cancel</button>
-                )}
-              </div>
-
-              {showAddGoal && (
-                <form onSubmit={handleCreateGoal} style={{ marginBottom: '25px', background: 'rgba(139, 92, 246, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
-                  <div className="form-group"><label>Goal Name</label><input required value={newGoal.name} onChange={e => setNewGoal({...newGoal, name: e.target.value})} /></div>
-                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    <div className="form-group"><label>Target ($)</label><input required type="number" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} /></div>
-                    <div className="form-group"><label>Starting ($)</label><input type="number" value={newGoal.current} onChange={e => setNewGoal({...newGoal, current: e.target.value})} /></div>
-                  </div>
-                  <button type="submit" style={{ background: '#8b5cf6' }}>Create Goal</button>
-                </form>
-              )}
-
-              {(!goals || goals.length === 0) ? (
-                <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', padding: '20px 0' }}>No savings goals set yet.</p>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                  {goals.map(goal => {
-                    if (!goal) return null;
-                    const progress = Math.min(100, (parseFloat(goal.current_amount || '0') / parseFloat(goal.target_amount || '1')) * 100);
-                    return (
-                      <div key={goal.id} style={{ position: 'relative' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-                          <strong style={{ color: 'var(--text)' }}>{goal.name}</strong>
-                          <button onClick={() => handleDeleteGoal(goal.id, goal.name)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: 'auto', padding: 0, marginTop: 0, boxShadow: 'none' }}>&times;</button>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
-                          <span><span className="currency">${safeFormat(goal.current_amount)}</span> / <span className="currency">${safeFormat(goal.target_amount)}</span></span>
-                          <span style={{ fontWeight: 700, color: progress > 80 ? 'var(--success)' : '#a78bfa' }}>{progress.toFixed(0)}%</span>
-                        </div>
-                        <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => handleUpdateGoalProgress(goal.id, parseFloat(goal.current_amount || '0'))}>
-                          <div style={{ width: `${progress}%`, height: '100%', background: progress > 80 ? 'var(--success)' : '#8b5cf6', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: `0 0 15px ${progress > 80 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(139, 92, 246, 0.3)'}` }}></div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           </div>
         </section>
 
@@ -220,6 +172,55 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
             })
           )}
         </section>
+      </div>
+
+      {/* SAVINGS ENVELOPES AT THE BOTTOM */}
+      <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+          <h3 style={{ margin: 0, color: '#a78bfa' }}>Savings Envelopes</h3>
+          {!showAddGoal ? (
+            <button onClick={() => setShowAddGoal(true)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.75rem', background: '#8b5cf6' }}>+ New Goal</button>
+          ) : (
+            <button onClick={() => setShowAddGoal(false)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.75rem', background: 'var(--text-muted)' }}>Cancel</button>
+          )}
+        </div>
+
+        {showAddGoal && (
+          <form onSubmit={handleCreateGoal} style={{ marginBottom: '25px', background: 'rgba(139, 92, 246, 0.05)', padding: '20px', borderRadius: '16px', border: '1px solid rgba(139, 92, 246, 0.1)' }}>
+            <div className="form-group"><label>Goal Name</label><input required value={newGoal.name} onChange={e => setNewGoal({...newGoal, name: e.target.value})} /></div>
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+              <div className="form-group"><label>Target ($)</label><input required type="number" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} /></div>
+              <div className="form-group"><label>Starting ($)</label><input type="number" value={newGoal.current} onChange={e => setNewGoal({...newGoal, current: e.target.value})} /></div>
+            </div>
+            <button type="submit" style={{ background: '#8b5cf6' }}>Create Goal</button>
+          </form>
+        )}
+
+        {(!goals || goals.length === 0) ? (
+          <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontStyle: 'italic', padding: '20px 0' }}>No savings goals set yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+            {goals.map(goal => {
+              if (!goal) return null;
+              const progress = Math.min(100, (parseFloat(goal.current_amount || '0') / parseFloat(goal.target_amount || '1')) * 100);
+              return (
+                <div key={goal.id} style={{ position: 'relative' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
+                    <strong style={{ color: 'var(--text)' }}>{goal.name}</strong>
+                    <button onClick={() => handleDeleteGoal(goal.id, goal.name)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', width: 'auto', padding: 0, marginTop: 0, boxShadow: 'none' }}>&times;</button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '8px' }}>
+                    <span><span className="currency">${safeFormat(goal.current_amount)}</span> / <span className="currency">${safeFormat(goal.target_amount)}</span></span>
+                    <span style={{ fontWeight: 700, color: progress > 80 ? 'var(--success)' : '#a78bfa' }}>{progress.toFixed(0)}%</span>
+                  </div>
+                  <div style={{ width: '100%', height: '10px', background: 'rgba(255,255,255,0.05)', borderRadius: '5px', overflow: 'hidden', cursor: 'pointer' }} onClick={() => handleUpdateGoalProgress(goal.id, parseFloat(goal.current_amount || '0'))}>
+                    <div style={{ width: `${progress}%`, height: '100%', background: progress > 80 ? 'var(--success)' : '#8b5cf6', transition: 'width 0.6s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: `0 0 15px ${progress > 80 ? 'rgba(34, 197, 94, 0.3)' : 'rgba(139, 92, 246, 0.3)'}` }}></div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
       <style>{`
         @media (min-width: 1024px) {

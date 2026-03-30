@@ -36,46 +36,53 @@
 
 .logo-text {
   display: flex;
-  align-items: center;
-  gap: 12px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
 }
 
 .brand-name {
-  font-size: 1.5rem;
+  font-size: 1.25rem;
   font-weight: 900;
   color: var(--text);
   letter-spacing: -0.04em;
   text-transform: uppercase;
+  line-height: 1;
 }
 
 .brand-divider {
-  width: 1px;
-  height: 24px;
-  background: var(--border);
-  opacity: 0.5;
+  display: none; /* Hide vertical divider in stacked mode */
 }
 
 .brand-tagline {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: var(--primary); /* Use primary color to make it stand out */
   text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.15em;
   white-space: nowrap;
-}
-
-@media (max-width: 640px) {
-  .brand-tagline, .brand-divider {
-    display: none; /* Keep it clean on very small phones */
-  }
+  line-height: 1;
 }
 
 @media (min-width: 768px) {
+  .logo-text {
+    flex-direction: row;
+    align-items: center;
+    gap: 12px;
+  }
   .brand-name {
     font-size: 1.75rem;
   }
+  .brand-divider {
+    display: block;
+    width: 1px;
+    height: 24px;
+    background: var(--border);
+    opacity: 0.5;
+  }
   .brand-tagline {
     font-size: 0.9rem;
+    color: var(--text-muted);
   }
 }
 

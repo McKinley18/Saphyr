@@ -7,39 +7,47 @@ export class TaxService {
     const annualSalary = parseFloat(salaryProfile?.annual_salary || '0');
     const contribution401kPercent = parseFloat(salaryProfile?.contribution_401k_percent || '0') / 100;
 
-    // 2. Get other taxable income for the year
+    // 2. Get additional income sources that are TAXED
+    const taxableSources = await db('income_sources')
+      .where({ user_id: userId, is_taxed: true });
+    
+    const additionalTaxableIncome = taxableSources.reduce((sum, src) => sum + (parseFloat(src.amount || '0') * 12), 0);
+
+    // 3. Get individual transactions marked as taxable income
     const incomeResult = await db('transactions')
       .where({ user_id: userId, type: 'income', is_taxable: true })
       .andWhereRaw('EXTRACT(YEAR FROM date) = ?', [year])
       .sum('amount as total_income')
       .first();
 
-    const otherIncome = parseFloat(incomeResult?.total_income || '0');
+    const otherIncome = parseFloat(incomeResult?.total_income || '0') + additionalTaxableIncome;
     
-    // 3. Calculate 401k deduction (Pre-tax)
+    // 4. Calculate 401k deduction (Pre-tax)
     const deduction401k = annualSalary * contribution401kPercent;
     const totalGrossIncome = annualSalary + otherIncome;
 
-    // 4. Get user tax profile (filing status)
+    // 5. Get user tax profile (filing status)
     const profile = await db('tax_profiles').where({ user_id: userId }).first();
     const filingStatus = profile?.filing_status || 'single';
     
     const standardDeductions: Record<string, number> = {
       'single': 15000,
       'married_joint': 30000,
-      'head_household': 22500
+      'married_separate': 15000,
+      'head_household': 22500,
+      'widow': 30000
     };
     const standardDeduction = standardDeductions[filingStatus] || 15000;
 
-    // 5. Calculate Taxable Income
+    // 6. Calculate Taxable Income
     const taxableIncome = Math.max(0, totalGrossIncome - deduction401k - standardDeduction);
 
-    // 6. Get brackets
+    // 7. Get brackets
     const brackets = await db('tax_brackets')
-      .where({ filing_status: filingStatus, year })
+      .where({ filing_status: (filingStatus === 'widow' ? 'married_joint' : filingStatus === 'married_separate' ? 'single' : filingStatus), year })
       .orderBy('lower_bound', 'asc');
 
-    // 7. Calculate Tax
+    // 8. Calculate Tax
     let estimatedTax = 0;
     if (brackets.length === 0) {
       estimatedTax = taxableIncome * 0.15; // Fallback
@@ -73,6 +81,7 @@ export class TaxService {
   }
 
   static async seed2025Brackets() {
+    // Note: Widow/Widower uses Married Joint brackets. Separate uses Single brackets.
     const brackets = [
       { filing_status: 'single', lower_bound: 0, upper_bound: 11925, rate: 0.10, year: 2025, region: 'federal' },
       { filing_status: 'single', lower_bound: 11925, upper_bound: 48475, rate: 0.12, year: 2025, region: 'federal' },

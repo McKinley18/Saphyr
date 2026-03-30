@@ -166,9 +166,9 @@ const Dashboard: React.FC<DashboardProps> = ({
         </h2>
 
         <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
-          <div style={{ flex: 1, padding: '12px', background: 'rgba(34, 197, 94, 0.08)', borderRadius: '12px', border: '1px solid rgba(34, 197, 94, 0.1)' }}>
-            <div style={{ fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800, textTransform: 'uppercase' }}>Daily Spending Power</div>
-            <div style={{ fontSize: '1.2rem', fontWeight: 900 }} className="currency positive">${safeFormat(dailySpendingPower)}<span style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 600 }}> / day</span></div>
+          <div style={{ flex: 1, padding: '12px', background: remainingBudget >= 0 ? 'rgba(34, 197, 94, 0.08)' : 'rgba(244, 63, 94, 0.08)', borderRadius: '12px', border: `1px solid ${remainingBudget >= 0 ? 'rgba(34, 197, 94, 0.1)' : 'rgba(244, 63, 94, 0.1)'}` }}>
+            <div style={{ fontSize: '0.65rem', color: remainingBudget >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 800, textTransform: 'uppercase' }}>{remainingBudget >= 0 ? 'Daily Spending Power' : 'Daily Overbudget'}</div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900 }} className={`currency ${remainingBudget >= 0 ? 'positive' : 'negative'}`}>${safeFormat(dailySpendingPower)}<span style={{ fontSize: '0.7rem', opacity: 0.6, fontWeight: 600 }}> / day</span></div>
           </div>
           <div style={{ flex: 1, padding: '12px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
             <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase' }}>Month Progress</div>
@@ -200,7 +200,7 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         {urgentBills.length > 0 ? (
           <div style={{ background: 'rgba(244, 63, 94, 0.1)', padding: '15px', borderRadius: '16px', border: '1px solid var(--danger)', animation: 'pulse 2s infinite', marginBottom: '15px' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>🚨 Urgent Action Required</div>
+            <div style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>🚨 Due on the {getOrdinal(urgentBills[0].due_day)}</div>
             {urgentBills.map(bill => (
               <div key={bill.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '8px' }}>
                 <strong style={{ fontSize: '1rem' }}>{bill.name}</strong>

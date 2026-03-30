@@ -16,6 +16,48 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
 
+  // Define default tabs
+  const defaultTabs = [
+    { path: '/', label: 'Dashboard' },
+    { path: '/income', label: 'Income' },
+    { path: '/accounts', label: 'Accounts' },
+    { path: '/bills', label: 'Bills' },
+    { path: '/transactions', label: 'Transactions' },
+    { path: '/trends', label: 'Trends' },
+    { path: '/settings', label: 'Settings' },
+  ];
+
+  // Get saved order or use default
+  const [tabs, setTabs] = useState(() => {
+    const saved = localStorage.getItem('saphyr_tab_order');
+    if (saved) {
+      try {
+        const orderedPaths = JSON.parse(saved);
+        return orderedPaths.map((path: string) => defaultTabs.find(t => t.path === path)).filter(Boolean);
+      } catch (e) {
+        return defaultTabs;
+      }
+    }
+    return defaultTabs;
+  });
+
+  // Sync tabs if they change elsewhere (like Settings)
+  useEffect(() => {
+    const handleStorage = () => {
+      const saved = localStorage.getItem('saphyr_tab_order');
+      if (saved) {
+        const orderedPaths = JSON.parse(saved);
+        setTabs(orderedPaths.map((path: string) => defaultTabs.find(t => t.path === path)).filter(Boolean));
+      }
+    };
+    window.addEventListener('storage', handleStorage);
+    const interval = setInterval(handleStorage, 2000);
+    return () => {
+      window.removeEventListener('storage', handleStorage);
+      clearInterval(interval);
+    };
+  }, []);
+
   const handleShare = async () => {
     const shareData = {
       title: 'Saphyr Finance Tracker',
@@ -45,7 +87,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
           <div className="logo-text">
             <span className="brand-name">Saphyr</span>
             <span className="brand-divider"></span>
-            <span className="brand-tagline">Finance Tracker</span>
+            <span className="brand-tagline">Financial Tracker</span>
           </div>
         </Link>
         
@@ -68,13 +110,16 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
               <div style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem', marginTop: '4px' }}>{user.full_name || user.email}</div>
             </div>
             
-            <Link to="/" className={`nav-link ${location.pathname === '/' ? 'active' : ''}`} onClick={closeMenu}>Dashboard</Link>
-            <Link to="/income" className={`nav-link ${location.pathname === '/income' ? 'active' : ''}`} onClick={closeMenu}>Income</Link>
-            <Link to="/accounts" className={`nav-link ${location.pathname === '/accounts' ? 'active' : ''}`} onClick={closeMenu}>Accounts</Link>
-            <Link to="/bills" className={`nav-link ${location.pathname === '/bills' ? 'active' : ''}`} onClick={closeMenu}>Bills</Link>
-            <Link to="/transactions" className={`nav-link ${location.pathname === '/transactions' ? 'active' : ''}`} onClick={closeMenu}>Transactions</Link>
-            <Link to="/trends" className={`nav-link ${location.pathname === '/trends' ? 'active' : ''}`} onClick={closeMenu}>Trends</Link>
-            <Link to="/settings" className={`nav-link ${location.pathname === '/settings' ? 'active' : ''}`} onClick={closeMenu}>Settings</Link>
+            {tabs.map((tab: any) => (
+              <Link 
+                key={tab.path} 
+                to={tab.path} 
+                className={`nav-link ${location.pathname === tab.path ? 'active' : ''}`} 
+                onClick={closeMenu}
+              >
+                {tab.label}
+              </Link>
+            ))}
             
             <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
               <button 

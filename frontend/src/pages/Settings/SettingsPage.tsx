@@ -12,6 +12,37 @@ const SettingsPage: React.FC = () => {
     localStorage.getItem('saphyr_hide_all_guides') === 'true'
   );
 
+  const defaultTabs = [
+    { path: '/', label: 'Dashboard' },
+    { path: '/income', label: 'Income' },
+    { path: '/accounts', label: 'Accounts' },
+    { path: '/bills', label: 'Bills' },
+    { path: '/transactions', label: 'Transactions' },
+    { path: '/trends', label: 'Trends' },
+    { path: '/settings', label: 'Settings' },
+  ];
+
+  const [orderedTabs, setOrderedTabs] = useState(() => {
+    const saved = localStorage.getItem('saphyr_tab_order');
+    if (saved) {
+      const paths = JSON.parse(saved);
+      return paths.map((path: string) => defaultTabs.find(t => t.path === path)).filter(Boolean);
+    }
+    return defaultTabs;
+  });
+
+  const moveTab = (index: number, direction: 'up' | 'down') => {
+    const newTabs = [...orderedTabs];
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= newTabs.length) return;
+
+    const [moved] = newTabs.splice(index, 1);
+    newTabs.splice(targetIndex, 0, moved);
+    
+    setOrderedTabs(newTabs);
+    localStorage.setItem('saphyr_tab_order', JSON.stringify(newTabs.map(t => t.path)));
+  };
+
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage({ text: '', type: '' });
@@ -137,7 +168,35 @@ const SettingsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Preferences */}
+      {/* 4. Rearrange Navigation */}
+      <div className="card" style={{ borderLeft: '5px solid #10b981' }}>
+        <h3 style={{ color: '#10b981', marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <span>↕️</span> Rearrange Navigation
+        </h3>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Customise the order of your menu tabs. Changes apply instantly.</p>
+        
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          {orderedTabs.map((tab: any, index: number) => (
+            <div key={tab.path} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <span style={{ fontWeight: 700, fontSize: '0.9rem' }}>{tab.label}</span>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button 
+                  onClick={() => moveTab(index, 'up')}
+                  disabled={index === 0}
+                  style={{ width: '40px', padding: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text)', boxShadow: 'none', marginTop: 0 }}
+                >↑</button>
+                <button 
+                  onClick={() => moveTab(index, 'down')}
+                  disabled={index === orderedTabs.length - 1}
+                  style={{ width: '40px', padding: '8px', background: 'rgba(255,255,255,0.05)', color: 'var(--text)', boxShadow: 'none', marginTop: 0 }}
+                >↓</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* 5. Preferences */}
       <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <h3 style={{ color: 'var(--text)', margin: 0 }}>App Preferences</h3>
         

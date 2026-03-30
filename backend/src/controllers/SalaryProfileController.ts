@@ -7,7 +7,14 @@ export class SalaryProfileController {
     try {
       const userId = req.userId;
       const profile = await db('salary_profiles').where({ user_id: userId }).first();
-      res.json(profile || { annual_salary: 0, contribution_401k_percent: 0 });
+      if (profile) {
+        res.json({
+          annual_salary: profile.annual_salary,
+          '401k_percent': profile['401k_percent']
+        });
+      } else {
+        res.json({ annual_salary: 0, '401k_percent': 0 });
+      }
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -23,14 +30,14 @@ export class SalaryProfileController {
       if (existing) {
         await db('salary_profiles').where({ user_id: userId }).update({
           annual_salary,
-          contribution_401k_percent,
+          '401k_percent': contribution_401k_percent,
           updated_at: new Date()
         });
       } else {
         await db('salary_profiles').insert({
           user_id: userId,
           annual_salary,
-          contribution_401k_percent
+          '401k_percent': contribution_401k_percent
         });
       }
       res.json({ message: 'Salary profile updated' });

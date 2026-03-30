@@ -25,7 +25,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
   loadData
 }) => {
   const [showAddSource, setShowAddSource] = useState(false);
-  const [newSource, setNewSource] = useState({ name: '', amount: '', account_id: '' });
+  const [newSource, setNewSource] = useState({ name: '', amount: '', account_id: '', is_taxed: false });
   const [taxProfile, setTaxProfile] = useState({ filing_status: 'single' });
 
   useEffect(() => {
@@ -52,9 +52,10 @@ const IncomePage: React.FC<IncomePageProps> = ({
       user_id: userId,
       name: newSource.name,
       amount: parseFloat(newSource.amount),
-      account_id: newSource.account_id || null
+      account_id: newSource.account_id || null,
+      is_taxed: newSource.is_taxed
     });
-    setNewSource({ name: '', amount: '', account_id: '' });
+    setNewSource({ name: '', amount: '', account_id: '', is_taxed: false });
     setShowAddSource(false);
     loadData();
   };
@@ -101,7 +102,9 @@ const IncomePage: React.FC<IncomePageProps> = ({
             <select value={taxProfile.filing_status} onChange={e => handleStatusChange(e.target.value)}>
               <option value="single">Single</option>
               <option value="married_joint">Married Filing Jointly</option>
+              <option value="married_separate">Married Filing Separately</option>
               <option value="head_household">Head of Household</option>
+              <option value="widow">Qualifying Surviving Spouse</option>
             </select>
           </div>
         </div>
@@ -158,6 +161,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
                 {cashAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
               </select>
             </div>
+            <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <input 
+                type="checkbox" 
+                checked={newSource.is_taxed} 
+                onChange={e => setNewSource({...newSource, is_taxed: e.target.checked})} 
+                style={{ width: '20px', height: '20px', cursor: 'pointer', marginTop: '20px' }}
+              />
+              <label style={{ marginBottom: 0, marginTop: '20px' }}>Taxed?</label>
+            </div>
             <button type="submit" style={{ width: 'auto', padding: '12px 20px' }}>Add</button>
           </form>
         )}
@@ -170,7 +182,10 @@ const IncomePage: React.FC<IncomePageProps> = ({
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
             {incomeSources.map(src => (
               <div key={src.id} style={{ padding: '12px 20px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <strong style={{ fontSize: '0.9rem' }}>{src.name}</strong>
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  <strong style={{ fontSize: '0.9rem' }}>{src.name}</strong>
+                  {src.is_taxed && <span style={{ fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800 }}>TAXED</span>}
+                </div>
                 <span className="currency positive" style={{ fontSize: '1rem' }}>+${safeFormat(src.amount)}</span>
                 <button 
                   onClick={() => handleDeleteSource(src.id, src.name)}

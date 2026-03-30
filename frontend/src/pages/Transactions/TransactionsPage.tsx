@@ -205,7 +205,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
               <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '10px' }}>Monthly Remaining</div>
-                <div style={{ fontSize: '2.25rem', fontWeight: 900, color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }} className="currency">
+                <div style={{ fontSize: '2.25rem', fontWeight: 900, color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }} className={`currency ${remaining >= 0 ? '' : 'negative'}`}>
                   ${safeFormat(remaining)}
                 </div>
               </div>
