@@ -209,16 +209,17 @@ const Dashboard: React.FC<DashboardProps> = ({
             ))}
           </div>
         ) : nextMajorBill ? (
-          <div style={{ background: 'rgba(59, 130, 246, 0.05)', padding: '15px', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '15px' }}>
-            <div style={{ fontSize: '0.7rem', color: 'var(--primary)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>📅 Next Up</div>
+          <div style={{ background: 'rgba(244, 63, 94, 0.08)', padding: '15px', borderRadius: '16px', border: '1px solid var(--danger)', marginBottom: '15px', animation: 'pulse 2s infinite' }}>
+            <div style={{ fontSize: '0.7rem', color: 'var(--danger)', fontWeight: 800, textTransform: 'uppercase', marginBottom: '5px' }}>🚨 Upcoming: {getOrdinal(nextMajorBill.due_day)}</div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong style={{ fontSize: '1rem' }}>{nextMajorBill.name}</strong>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Due in {nextMajorBill.daysRemaining} days ({getOrdinal(nextMajorBill.due_day)})</div>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Due in {nextMajorBill.daysRemaining} days</div>
               </div>
-              <span style={{ fontWeight: 900, fontSize: '1.2rem' }} className="currency">${safeFormat(nextMajorBill.balance)}</span>
+              <span style={{ fontWeight: 900, fontSize: '1.2rem' }} className="currency negative">${safeFormat(nextMajorBill.balance)}</span>
             </div>
           </div>
+
         ) : (
           <p style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.9rem', margin: '20px 0' }}>No upcoming bills detected for the next 30 days.</p>
         )}

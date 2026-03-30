@@ -118,14 +118,18 @@ function AppContent() {
 
   const handleSalarySubmit = async (e: any) => {
     e.preventDefault();
+    console.log("Submitting salary update:", salary);
     try {
-      await updateSalaryProfile({
+      const response = await updateSalaryProfile({
         annual_salary: salary.annual_salary,
         contribution_401k_percent: salary['401k_percent']
       });
+      console.log("Salary update response:", response);
       await loadData();
+      alert("Income updated successfully!");
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
+      alert("Error: " + err.message);
     }
   };
 

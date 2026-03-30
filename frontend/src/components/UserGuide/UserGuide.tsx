@@ -8,20 +8,25 @@ interface UserGuideProps {
 
 const UserGuide: React.FC<UserGuideProps> = ({ guideKey, title, children }) => {
   const [isVisible, setIsVisible] = useState(true);
-  const [isGlobalHidden, setIsGlobalHidden] = useState(false);
+  const [isGlobalHidden, setIsGlobalHidden] = useState(localStorage.getItem('saphyr_hide_all_guides') === 'true');
 
-  useEffect(() => {
-    // 1. Check master toggle
+  const checkVisibility = () => {
     const globalHide = localStorage.getItem('saphyr_hide_all_guides') === 'true';
     setIsGlobalHidden(globalHide);
 
-    // 2. Check individual key
     const hidden = localStorage.getItem(`hide_guide_${guideKey}`);
     if (hidden === 'true' || globalHide) {
       setIsVisible(false);
     } else {
       setIsVisible(true);
     }
+  };
+
+  useEffect(() => {
+    checkVisibility();
+    // Use an interval to sync across the app
+    const interval = setInterval(checkVisibility, 1000);
+    return () => clearInterval(interval);
   }, [guideKey]);
 
   const hideGuide = () => {
