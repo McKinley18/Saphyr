@@ -218,7 +218,6 @@ function AppContent() {
                 accounts={accounts}
                 transactions={transactions}
                 incomeSources={incomeSources}
-                loadData={loadData}
               />
             </ProtectedRoute>
           } />

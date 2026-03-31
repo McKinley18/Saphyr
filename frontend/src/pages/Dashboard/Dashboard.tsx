@@ -192,7 +192,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   const renderBox = (id: string) => {
     const { 
       remainingBudget, dailyPower, spentThisMonth, startingBudget, 
-      totalCash, totalDebt, netWorth, monthlyInflow, monthlyBills,
+      totalCash, totalDebt, netWorth, monthlyBills,
       today, lastDayOfMonth 
     } = metrics;
 
