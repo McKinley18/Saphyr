@@ -73,7 +73,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '20px' }}>
                 <div>
                   <label style={{ fontSize: '0.75rem', color: 'var(--danger)', fontWeight: 800, letterSpacing: '0.05em' }}>TOTAL MONTHLY OBLIGATIONS</label>
-                  <h2 style={{ fontSize: '3rem', margin: '15px 0', fontWeight: 900 }} className="currency negative">${safeFormat(totalBills)}</h2>
+                  <h2 style={{ fontSize: '3rem', margin: '10px 0', fontWeight: 900 }} className="currency negative">${safeFormat(totalBills)}</h2>
                 </div>
                 <div style={{ textAlign: 'right', minWidth: '150px' }}>
                   <label style={{ fontSize: '0.65rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.05em' }}>EST. INTEREST DRAG</label>
@@ -127,7 +127,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                               <div>
                                 <div style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text)' }}>{bill.name}</div>
-                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', fontWeight: 600 }}>Due: {getOrdinal(bill.due_day)} • {bill.type}</div>
+                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', fontWeight: 600 }}>Due Date: {getOrdinal(bill.due_day)} • {bill.type}</div>
                               </div>
                               <div style={{ textAlign: 'right' }}>
                                 <div style={{ fontWeight: 900, fontSize: '1.1rem' }} className="currency negative">${safeFormat(bill.balance)}</div>
@@ -156,7 +156,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                         <thead>
                           <tr style={{ textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>
                             <th style={{ padding: '12px 0' }}>Description</th>
-                            <th>Schedule</th>
+                            <th>Due Date</th>
                             <th style={{ textAlign: 'right' }}>Obligation</th>
                             <th style={{ width: '50px' }}></th>
                           </tr>
@@ -172,7 +172,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                                 </div>
                               </td>
                               <td style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 700 }}>
-                                {bill.due_day ? `The ${getOrdinal(bill.due_day)}` : '-'}
+                                {bill.due_day ? getOrdinal(bill.due_day) : '-'}
                               </td>
                               <td style={{ textAlign: 'right', fontWeight: 900, fontSize: '1.15rem' }} className="currency negative">
                                 ${safeFormat(bill.balance)}
