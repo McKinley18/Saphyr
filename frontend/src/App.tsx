@@ -227,11 +227,8 @@ function AppContent() {
             <ProtectedRoute>
               <IncomePage 
                 userId={user?.id}
-                salary={salaryInput}
-                setSalary={setSalaryInput}
                 savedSalary={salary}
                 taxEstimate={taxEstimate}
-                accounts={accounts}
                 incomeSources={incomeSources}
                 handleSalarySubmit={handleSalarySubmit}
                 loadData={loadData}
