@@ -45,7 +45,6 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
     
     // If they make an extra payment now, and keep paying the SAME monthly amount
     const newTerm = calculateRemainingTerm(newPrincipal, apr, standardPayment);
-    const monthsSaved = originalTerm - (newTerm + (paymentValue > 0 ? 0 : 0)); // simplified
     
     // Total Interest Cost = (Payment * Months) - Principal
     const originalTotalInterest = (standardPayment * originalTerm) - principal;
