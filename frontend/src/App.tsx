@@ -103,6 +103,8 @@ function AppContent() {
         fetchGoals()
       ]);
       
+      console.log("Loaded Core Data:", { accounts: accs?.length, salary: sal, tax: !!tax });
+      
       setAccounts(accs || []);
       setTransactions(txs || []);
       setSalary(sal || { annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
@@ -149,6 +151,7 @@ function AppContent() {
 
   const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
     e.preventDefault();
+    console.log("🚀 SUBMITTING INCOME UPDATE:", { filingStatus, extraData });
     try {
       const response = await updateSalaryProfile({
         annual_salary: extraData?.annual_salary,
@@ -161,7 +164,10 @@ function AppContent() {
         manual_tax_amount: extraData?.manual_tax_amount
       });
       
+      console.log("✅ SERVER RESPONSE:", response);
+      
       if (response.taxEstimate) {
+        console.log("📊 NEW TAX ESTIMATE RECEIVED:", response.taxEstimate);
         setTaxEstimate(response.taxEstimate);
         setSalary({
           annual_salary: response.taxEstimate.annual_salary,
@@ -170,8 +176,9 @@ function AppContent() {
         });
       }
       
-      await loadData(true); // Force reload after save
+      await loadData(true); 
     } catch (err: any) {
+      console.error("❌ UPDATE FAILED:", err);
       setError("Failed to update salary: " + err.message);
     }
   };
