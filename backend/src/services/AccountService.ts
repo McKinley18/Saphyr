@@ -12,6 +12,7 @@ export interface Account {
   is_bill?: boolean;
   monthly_deposit?: number;
   due_day?: number;
+  loan_term?: number;
   currency?: string;
   created_at?: Date;
   updated_at?: Date;

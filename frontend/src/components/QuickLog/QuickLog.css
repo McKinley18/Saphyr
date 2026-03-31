@@ -110,7 +110,7 @@
 /* Mobile Adjustments */
 @media (max-width: 768px) {
   .fab-button {
-    bottom: 20px;
+    bottom: 90px; /* Moved up to clear bottom nav */
     right: 20px;
     width: 56px;
     height: 56px;

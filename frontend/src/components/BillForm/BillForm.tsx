@@ -14,6 +14,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups: existi
     type: 'Utility',
     balance: '',
     apr: '',
+    loan_term: '',
     group_name: 'Monthly Bills',
     due_day: ''
   });
@@ -38,6 +39,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups: existi
         type: formData.type,
         balance: parseFloat(formData.balance) || 0,
         apr: (parseFloat(formData.apr) || 0) / 100,
+        loan_term: parseInt(formData.loan_term) || null,
         is_bill: true,
         group_name: finalGroupName,
         due_day: parseInt(formData.due_day) || null
@@ -50,7 +52,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups: existi
         localStorage.setItem(`saphyr_bill_groups_${userId}`, JSON.stringify(updated));
       }
 
-      setFormData({ ...formData, name: '', balance: '', due_day: '', apr: '' });
+      setFormData({ ...formData, name: '', balance: '', due_day: '', apr: '', loan_term: '' });
       setIsAddingNewGroup(false);
       onBillAdded();
     } catch (err) {
@@ -145,9 +147,15 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups: existi
           </div>
         </div>
 
-        <div className="form-group">
-          <label>APR % (If Credit/Loan)</label>
-          <input type="number" step="0.01" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} placeholder="0.00" />
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+          <div className="form-group">
+            <label>APR % (If Credit/Loan)</label>
+            <input type="number" step="0.01" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} placeholder="0.00" />
+          </div>
+          <div className="form-group">
+            <label>Loan Term (Months)</label>
+            <input type="number" value={formData.loan_term} onChange={e => setFormData({...formData, loan_term: e.target.value})} placeholder="e.g. 60" />
+          </div>
         </div>
         
         <button type="submit" style={{ background: '#ef4444' }}>Add Bill to Budget</button>

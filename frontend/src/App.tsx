@@ -37,12 +37,49 @@ function AppContent() {
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0 });
+  const [salaryInput, setSalaryInput] = useState({ annual_salary: 0, '401k_percent': 0 });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [isBlurred, setIsBlurred] = useState(false);
   
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
+
+  // Stealth Mode Implementation
+  useEffect(() => {
+    if (!user?.stealth_mode) {
+      setIsBlurred(false);
+      return;
+    }
+
+    const handleBlur = () => setIsBlurred(true);
+    const handleFocus = () => setIsBlurred(false);
+
+    window.addEventListener('blur', handleBlur);
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      window.removeEventListener('blur', handleBlur);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, [user?.stealth_mode]);
+
+  // Apply Accent Color
+  useEffect(() => {
+    if (user?.accent_color) {
+      document.documentElement.style.setProperty('--primary', user.accent_color);
+    }
+  }, [user?.accent_color]);
+
+  console.log("App State:", { authLoading, loading, user: !!user, error });
+
+  useEffect(() => {
+    window.onerror = function(message, _source, lineno) {
+      alert(`RUNTIME ERROR: ${message} at line ${lineno}`);
+      return false;
+    };
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -53,15 +90,11 @@ function AppContent() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  useEffect(() => {
-    window.onerror = function(message, _source, lineno) {
-      alert(`RUNTIME ERROR: ${message} at line ${lineno}`);
-      return false;
-    };
-  }, []);
-
   const loadData = async () => {
-    if (!user) return;
+    if (!user) {
+      setLoading(false);
+      return;
+    }
     
     try {
       const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = await Promise.all([
@@ -78,6 +111,7 @@ function AppContent() {
       setAccounts(accs || []);
       setTransactions(txs || []);
       setSalary(sal || { annual_salary: 0, '401k_percent': 0 });
+      setSalaryInput(sal || { annual_salary: 0, '401k_percent': 0 });
       setTaxEstimate(tax);
       setBudgets(bdgs || []);
       setIncomeSources(incSrcs || []);
@@ -109,34 +143,47 @@ function AppContent() {
   };
 
   useEffect(() => {
-    if (user) {
-      loadData();
-    } else {
-      setLoading(false);
+    if (!authLoading) {
+      if (user) {
+        loadData();
+      } else {
+        setLoading(false);
+      }
     }
-  }, [user]);
-
-  const handleSalarySubmit = async (e: any) => {
+  }, [user, authLoading]);
+  const handleSalarySubmit = async (e: any, filingStatus?: string) => {
     e.preventDefault();
-    setLoading(true);
     try {
-      await updateSalaryProfile({
-        annual_salary: salary.annual_salary,
-        contribution_401k_percent: salary['401k_percent']
+      const response = await updateSalaryProfile({
+        annual_salary: salaryInput.annual_salary,
+        contribution_401k_percent: salaryInput['401k_percent'],
+        filing_status: filingStatus
       });
+      
+      // Use the estimate directly from the response for 100% sync
+      if (response.taxEstimate) {
+        setTaxEstimate(response.taxEstimate);
+        // Also update the core salary state so display labels are fresh
+        setSalary({
+          annual_salary: response.taxEstimate.input_salary,
+          '401k_percent': response.taxEstimate.input_401k_percent * 100,
+          filing_status: response.taxEstimate.filing_status
+        });
+      }
+      
+      // Refresh the rest of the data in background
       await loadData();
-      // Re-zero the inputs after update
-      setSalary({ annual_salary: 0, '401k_percent': 0 });
-      alert("Income updated successfully!");
+      
+      // Reset only the input boxes to zero as requested
+      setSalaryInput({ annual_salary: 0, '401k_percent': 0 });
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
-      alert("Error: " + err.message);
-    } finally {
-      setLoading(false);
     }
   };
 
-  if (loading) return <div className="container" style={{ padding: '100px', textAlign: 'center' }}><h3>Saphyr is loading...</h3></div>;
+  if (authLoading || (user && loading)) {
+    return <div className="container" style={{ padding: '100px', textAlign: 'center' }}><h3>Saphyr is loading...</h3></div>;
+  }
 
   if (error && user) {
     return (
@@ -152,7 +199,11 @@ function AppContent() {
   }
 
   return (
-    <Router>
+    <div style={{ 
+      filter: isBlurred ? 'blur(20px)' : 'none', 
+      transition: 'filter 0.3s ease',
+      minHeight: '100vh'
+    }}>
       <Navbar theme={theme} toggleTheme={toggleTheme} />
       <div className="container">
         <Routes>
@@ -176,8 +227,9 @@ function AppContent() {
             <ProtectedRoute>
               <IncomePage 
                 userId={user?.id}
-                salary={salary}
-                setSalary={setSalary}
+                salary={salaryInput}
+                setSalary={setSalaryInput}
+                savedSalary={salary}
                 taxEstimate={taxEstimate}
                 accounts={accounts}
                 incomeSources={incomeSources}
@@ -241,15 +293,17 @@ function AppContent() {
           onTransactionAdded={loadData} 
         />
       )}
-    </Router>
+    </div>
   );
 }
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <Router>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </Router>
   );
 }
 

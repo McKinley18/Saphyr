@@ -60,13 +60,13 @@ const SignupPage: React.FC = () => {
 
         {error && (
           <div style={{ background: 'rgba(244, 63, 94, 0.1)', color: 'var(--danger)', padding: '12px', borderRadius: '12px', marginBottom: '20px', fontSize: '0.85rem', textAlign: 'center', fontWeight: 600 }}>
-            ⚠️ {error}
+            {error}
           </div>
         )}
 
         {loading && (
           <div style={{ textAlign: 'center', marginBottom: '20px', color: 'var(--primary)', fontSize: '0.85rem', fontWeight: 600, animation: 'pulse 2s infinite' }}>
-            ⏳ Waking up the secure server... (This takes ~30s if idle)
+            Waking up the secure server... (This takes ~30s if idle)
           </div>
         )}
 

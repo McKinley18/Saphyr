@@ -42,4 +42,14 @@ export class EmailService {
     });
     */
   }
+
+  static async send2FACode(email: string, code: string) {
+    console.log("-----------------------------------------");
+    console.log(`📧 2FA CODE SENT TO: ${email}`);
+    console.log(`🔢 CODE: ${code}`);
+    console.log("-----------------------------------------");
+
+    // Real implementation would use nodemailer here
+    return true;
+  }
 }

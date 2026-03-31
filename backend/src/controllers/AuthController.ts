@@ -9,6 +9,21 @@ import { AuthRequest } from '../middleware/authMiddleware.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'saphyr-secret-key-2025';
 
 export class AuthController {
+  private static userResponse(user: any) {
+    return {
+      id: user.id,
+      email: user.email,
+      full_name: user.full_name,
+      last_login_at: user.last_login_at,
+      auto_logout_minutes: user.auto_logout_minutes,
+      two_factor_method: user.two_factor_method,
+      accent_color: user.accent_color,
+      currency_symbol: user.currency_symbol,
+      visible_tabs: user.visible_tabs ? JSON.parse(user.visible_tabs) : null,
+      stealth_mode: !!user.stealth_mode
+    };
+  }
+
   static async signup(req: Request, res: Response) {
     try {
       const { email, password, full_name } = req.body;
@@ -28,11 +43,11 @@ export class AuthController {
         email,
         password_hash,
         full_name: full_name || null
-      }).returning(['id', 'email', 'full_name']);
+      }).returning('*');
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.status(201).json({ user, token });
+      res.status(201).json({ user: this.userResponse(user), token });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -52,10 +67,37 @@ export class AuthController {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
+      // Check if 2FA is enabled
+      if (user.two_factor_method === 'email') {
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        const codeHash = await bcrypt.hash(code, 10);
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+        await db('users').where({ id: user.id }).update({
+          two_factor_code: codeHash,
+          two_factor_expires_at: expiresAt
+        });
+
+        await EmailService.send2FACode(user.email, code);
+
+        return res.json({ 
+          require_2fa: true, 
+          email: user.email,
+          userId: user.id 
+        });
+      }
+
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
+      // Update last login
+      await db('users').where({ id: user.id }).update({ 
+        last_login_at: new Date() 
+      });
+
+      const updatedUser = await db('users').where({ id: user.id }).first();
+
       res.json({
-        user: { id: user.id, email: user.email, full_name: user.full_name },
+        user: this.userResponse(updatedUser),
         token
       });
     } catch (error: any) {
@@ -144,6 +186,71 @@ export class AuthController {
       });
 
       res.json({ message: 'Password has been reset successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async updatePreferences(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      const { 
+        auto_logout_minutes, 
+        two_factor_method,
+        accent_color,
+        currency_symbol,
+        visible_tabs,
+        stealth_mode
+      } = req.body;
+
+      const updateData: any = { updated_at: new Date() };
+      if (auto_logout_minutes !== undefined) updateData.auto_logout_minutes = auto_logout_minutes;
+      if (two_factor_method !== undefined) updateData.two_factor_method = two_factor_method;
+      if (accent_color !== undefined) updateData.accent_color = accent_color;
+      if (currency_symbol !== undefined) updateData.currency_symbol = currency_symbol;
+      if (visible_tabs !== undefined) updateData.visible_tabs = JSON.stringify(visible_tabs);
+      if (stealth_mode !== undefined) updateData.stealth_mode = stealth_mode;
+
+      await db('users').where({ id: userId }).update(updateData);
+
+      const updatedUser = await db('users').where({ id: userId }).first();
+
+      res.json({ 
+        message: 'Preferences updated',
+        user: this.userResponse(updatedUser)
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async verify2FA(req: Request, res: Response) {
+    try {
+      const { userId, code } = req.body;
+
+      const user = await db('users').where({ id: userId }).first();
+      if (!user || !user.two_factor_code || new Date() > new Date(user.two_factor_expires_at)) {
+        return res.status(400).json({ error: 'Code expired or invalid. Please try logging in again.' });
+      }
+
+      const isValid = await bcrypt.compare(code, user.two_factor_code);
+      if (!isValid) {
+        return res.status(401).json({ error: 'Invalid verification code' });
+      }
+
+      // Clear code after success
+      await db('users').where({ id: userId }).update({
+        two_factor_code: null,
+        two_factor_expires_at: null,
+        last_login_at: new Date()
+      });
+
+      const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
+
+      res.json({
+        user: this.userResponse(user),
+        token
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

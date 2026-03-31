@@ -16,6 +16,7 @@ const router = Router();
 // Public Auth Routes
 router.post('/auth/signup', AuthController.signup);
 router.post('/auth/login', AuthController.login);
+router.post('/auth/verify-2fa', AuthController.verify2FA);
 router.post('/auth/forgot-password', AuthController.forgotPassword);
 router.post('/auth/reset-password', AuthController.resetPassword);
 
@@ -24,6 +25,7 @@ router.use(authMiddleware);
 
 // User/Settings Routes
 router.post('/auth/update-password', AuthController.updatePassword);
+router.put('/auth/preferences', AuthController.updatePreferences);
 router.delete('/auth/delete-account', AuthController.deleteAccount);
 
 // Account Routes
@@ -94,6 +96,8 @@ router.post('/tax/profile', async (req, res) => {
 // Salary Routes
 router.get('/salary', SalaryProfileController.getSalaryProfile);
 router.post('/salary', SalaryProfileController.updateSalaryProfile);
+router.post('/salary/deductions', SalaryProfileController.addCustomDeduction);
+router.delete('/salary/deductions/:id', SalaryProfileController.deleteCustomDeduction);
 
 // Budget Routes
 router.get('/budgets', BudgetController.getBudgets);

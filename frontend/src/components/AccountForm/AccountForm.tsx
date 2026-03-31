@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
-import { createAccount } from '../../services/api';
+import React, { useState, useEffect } from 'react';
+import { createAccount, updateAccount } from '../../services/api';
 
 interface AccountFormProps {
   onAccountAdded: () => void;
   userId: string;
   groups: string[];
+  initialData?: any;
+  onCancel?: () => void;
 }
 
-const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, groups: existingGroups }) => {
+const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, groups: existingGroups, initialData, onCancel }) => {
   const [isAddingNewGroup, setIsAddingNewGroup] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -16,6 +18,26 @@ const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, group
     monthly_deposit: '',
     group_name: 'Cash Accounts'
   });
+
+  useEffect(() => {
+    if (initialData) {
+      setFormData({
+        name: initialData.name || '',
+        type: initialData.type || 'Checking',
+        balance: initialData.balance?.toString() || '',
+        monthly_deposit: initialData.monthly_deposit?.toString() || '',
+        group_name: initialData.group_name || 'Cash Accounts'
+      });
+    } else {
+      setFormData({
+        name: '',
+        type: 'Checking',
+        balance: '',
+        monthly_deposit: '',
+        group_name: 'Cash Accounts'
+      });
+    }
+  }, [initialData]);
 
   // Load custom groups from memory
   const [savedGroups, setSavedGroups] = useState<string[]>(() => {
@@ -30,8 +52,7 @@ const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, group
     e.preventDefault();
     try {
       const finalGroupName = formData.group_name || 'Uncategorized';
-      
-      await createAccount({ 
+      const payload = { 
         user_id: userId,
         name: formData.name,
         type: formData.type,
@@ -39,7 +60,13 @@ const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, group
         monthly_deposit: parseFloat(formData.monthly_deposit) || 0,
         is_bill: false,
         group_name: finalGroupName
-      });
+      };
+
+      if (initialData?.id) {
+        await updateAccount(initialData.id, payload);
+      } else {
+        await createAccount(payload);
+      }
 
       // Save to memory
       if (!savedGroups.includes(finalGroupName)) {
@@ -48,17 +75,21 @@ const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, group
         localStorage.setItem(`saphyr_groups_${userId}`, JSON.stringify(updated));
       }
 
-      setFormData({ ...formData, name: '', balance: '', monthly_deposit: '' });
+      if (!initialData) {
+        setFormData({ ...formData, name: '', balance: '', monthly_deposit: '' });
+      }
       setIsAddingNewGroup(false);
       onAccountAdded();
     } catch (err) {
-      console.error("Failed to add account:", err);
+      console.error("Failed to save account:", err);
     }
   };
 
   return (
-    <div className="card" style={{ borderLeft: '4px solid #16a34a' }}>
-      <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>Add Cash Account</h3>
+    <div className="card" style={{ borderLeft: `4px solid ${initialData ? 'var(--primary)' : '#16a34a'}` }}>
+      <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>
+        {initialData ? 'EDIT' : 'ADD'} CASH ACCOUNT
+      </h3>
       <form onSubmit={handleSubmit}>
         <div className="form-group">
           <label>Account Name</label>
@@ -139,7 +170,20 @@ const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, group
           </div>
         </div>
         
-        <button type="submit" style={{ background: '#16a34a' }}>Create Account</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button type="submit" style={{ background: initialData ? 'var(--primary)' : '#16a34a' }}>
+            {initialData ? 'SAVE CHANGES' : 'CREATE ACCOUNT'}
+          </button>
+          {initialData && (
+            <button 
+              type="button" 
+              onClick={onCancel}
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', boxShadow: 'none' }}
+            >
+              CANCEL
+            </button>
+          )}
+        </div>
       </form>
     </div>
   );

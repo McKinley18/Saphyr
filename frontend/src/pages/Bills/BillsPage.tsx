@@ -1,6 +1,7 @@
 import React from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import BillForm from '../../components/BillForm/BillForm';
+import BillSimulator from '../../components/BillSimulator/BillSimulator';
 import { deleteAccount } from '../../services/api';
 import { getOrdinal } from '../../services/utils';
 
@@ -45,9 +46,8 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
         <p>Manage your monthly commitments and crush your debt.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
           <li><strong>Recurring Bills:</strong> Add your Rent, Netflix, Utilities, and Loans here.</li>
-          <li><strong>Due Day:</strong> Setting a due day (1-31) triggers automated alerts on your Dashboard when a bill is coming up.</li>
-          <li><strong>Debt Avalanche:</strong> For credit cards and loans, enter your **APR %**. We'll show you exactly how much interest you're paying each month.</li>
-          <li><strong>Priority Payoff:</strong> Focus on the highest interest rates first to save the most money over time.</li>
+          <li><strong>Due Day:</strong> Setting a due day (1-31) triggers automated alerts on your Dashboard.</li>
+          <li><strong>Payment Simulator:</strong> Select bills on the left to see how a lump sum payment affects your debt.</li>
         </ul>
       </UserGuide>
 
@@ -58,6 +58,8 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
               <label style={{ fontSize: '0.8rem', color: 'var(--danger)', fontWeight: 800 }}>TOTAL MONTHLY BILLS</label>
               <h2 style={{ fontSize: '2.5rem', margin: '5px 0', fontWeight: 900 }} className="currency negative">${safeFormat(totalBills)}</h2>
             </div>
+            
+            <BillSimulator bills={billAccounts} />
             
             <BillForm userId={userId} onBillAdded={loadData} groups={groupNames} />
           </div>
@@ -97,7 +99,10 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                           <tr key={bill.id} style={{ position: 'relative' }}>
                             <td style={{ padding: '16px 0' }}>
                               <strong style={{ color: 'var(--text)', fontSize: '1rem' }}>{bill.name}</strong>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>{bill.type}</div>
+                              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+                                {bill.type} {bill.apr > 0 && `@ ${(bill.apr * 100).toFixed(2)}%`}
+                                {bill.loan_term > 0 && ` • ${bill.loan_term}mo`}
+                              </div>
                             </td>
                             <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>
                               {bill.due_day ? getOrdinal(bill.due_day) : '-'}

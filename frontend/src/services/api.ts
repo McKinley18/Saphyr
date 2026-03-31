@@ -26,6 +26,15 @@ export const login = async (data: any) => {
   return response.json();
 };
 
+export const verify2FA = async (data: any) => {
+  const response = await fetch(`${API_URL}/auth/verify-2fa`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
 export const forgotPassword = async (email: string) => {
   const response = await fetch(`${API_URL}/auth/forgot-password`, {
     method: 'POST',
@@ -115,7 +124,7 @@ export const deleteTransaction = async (id: string) => {
 };
 
 export const fetchTaxEstimate = async () => {
-  const response = await fetch(`${API_URL}/tax/estimate`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/tax/estimate?t=${Date.now()}`, { headers: getHeaders() });
   return response.json();
 };
 
@@ -151,6 +160,23 @@ export const updateSalaryProfile = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
+export const addDeduction = async (data: any) => {
+  const response = await fetch(`${API_URL}/salary/deductions`, {
+    method: 'POST',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+  });
+  return response.json();
+};
+
+export const deleteDeduction = async (id: string) => {
+  const response = await fetch(`${API_URL}/salary/deductions/${id}`, {
+    method: 'DELETE',
+    headers: getHeaders(),
   });
   return response.json();
 };

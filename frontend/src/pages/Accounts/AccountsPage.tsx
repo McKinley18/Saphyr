@@ -12,6 +12,7 @@ interface AccountsPageProps {
 
 const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, loadData }) => {
   const [showAddGoal, setShowAddGoal] = useState(false);
+  const [editingAccount, setEditingAccount] = useState<any>(null);
   const [newGoal, setNewGoal] = useState({ name: '', target: '', current: '' });
 
   const safeFormat = (val: any) => {
@@ -40,6 +41,11 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         console.error("Delete failed:", err);
       }
     }
+  };
+
+  const handleEdit = (acc: any) => {
+    setEditingAccount(acc);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleCreateGoal = async (e: React.FormEvent) => {
@@ -88,16 +94,24 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
       <UserGuide guideKey="accounts" title="Cash Accounts">
         <p>This page is for tracking your liquid assets and specific savings goals.</p>
         <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-          <li><strong>Liquid Accounts:</strong> Add your Checking, Savings, and physical Cash balances here. Do not add bills or credit cards on this page.</li>
+          <li><strong>Liquid Accounts:</strong> Add your Checking, Savings, and physical Cash balances here.</li>
           <li><strong>Savings Envelopes:</strong> Create specific goals (e.g. "Emergency Fund"). Click the progress bar to quickly add money to a goal.</li>
-          <li><strong>Goal Progress:</strong> The bars show how close you are to your target. These are "virtual" buckets within your total cash.</li>
         </ul>
       </UserGuide>
 
       <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
         <section style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
           <div className="account-sidebar-container" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <AccountForm userId={userId} onAccountAdded={loadData} groups={groupNames} />
+            <AccountForm 
+              userId={userId} 
+              onAccountAdded={() => {
+                loadData();
+                setEditingAccount(null);
+              }} 
+              groups={groupNames} 
+              initialData={editingAccount}
+              onCancel={() => setEditingAccount(null)}
+            />
           </div>
         </section>
 
@@ -127,7 +141,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
                           <th style={{ padding: '12px 0' }}>Account Name</th>
                           <th>Type</th>
                           <th style={{ textAlign: 'right' }}>Balance</th>
-                          <th style={{ width: '50px' }}></th>
+                          <th style={{ width: '100px', textAlign: 'right' }}>Actions</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -143,23 +157,44 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
                                 ${safeFormat(acc.balance)}
                               </td>
                               <td style={{ textAlign: 'right' }}>
-                                <button 
-                                  onClick={() => handleDelete(acc.id, acc.name)}
-                                  style={{ 
-                                    padding: '4px 10px', 
-                                    width: 'auto', 
-                                    background: 'none', 
-                                    color: 'var(--text-muted)', 
-                                    fontSize: '1.4rem', 
-                                    cursor: 'pointer', 
-                                    border: 'none',
-                                    marginTop: 0,
-                                    boxShadow: 'none'
-                                  }}
-                                  title="Delete"
-                                >
-                                  &times;
-                                </button>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                  <button 
+                                    onClick={() => handleEdit(acc)}
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      width: 'auto', 
+                                      background: 'none', 
+                                      color: 'var(--primary)', 
+                                      fontSize: '0.7rem', 
+                                      fontWeight: 800,
+                                      cursor: 'pointer', 
+                                      border: '1px solid var(--primary)',
+                                      borderRadius: '4px',
+                                      marginTop: 0,
+                                      boxShadow: 'none'
+                                    }}
+                                  >
+                                    EDIT
+                                  </button>
+                                  <button 
+                                    onClick={() => handleDelete(acc.id, acc.name)}
+                                    style={{ 
+                                      padding: '4px 8px', 
+                                      width: 'auto', 
+                                      background: 'none', 
+                                      color: 'var(--danger)', 
+                                      fontSize: '1.4rem', 
+                                      cursor: 'pointer', 
+                                      border: 'none',
+                                      marginTop: 0,
+                                      boxShadow: 'none',
+                                      lineHeight: 1
+                                    }}
+                                    title="Delete"
+                                  >
+                                    &times;
+                                  </button>
+                                </div>
                               </td>
                             </tr>
                           );
@@ -174,7 +209,6 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         </section>
       </div>
 
-      {/* SAVINGS ENVELOPES AT THE BOTTOM */}
       <div className="card" style={{ borderLeft: '5px solid #8b5cf6' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
           <h3 style={{ margin: 0, color: '#a78bfa' }}>Savings Envelopes</h3>

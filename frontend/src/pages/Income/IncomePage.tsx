@@ -1,232 +1,284 @@
 import React, { useState, useEffect } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
-import TaxEstimator from '../../components/TaxEstimator/TaxEstimator';
-import { createIncomeSource, deleteIncomeSource, fetchTaxProfile, updateTaxProfile, seedTaxBrackets } from '../../services/api';
+import { 
+  createIncomeSource, 
+  deleteIncomeSource,
+  addDeduction,
+  deleteDeduction,
+  updateSalaryProfile
+} from '../../services/api';
 
 interface IncomePageProps {
   userId: string;
-  salary: any;
+  salary: any; 
   setSalary: (s: any) => void;
+  savedSalary: any; 
   taxEstimate: any;
   accounts: any[];
   incomeSources: any[];
-  handleSalarySubmit: (e: any) => void;
+  handleSalarySubmit: (e: any, status: string, extraData?: any) => void;
   loadData: () => void;
 }
 
 const IncomePage: React.FC<IncomePageProps> = ({ 
-  userId, 
-  salary, 
-  setSalary, 
-  taxEstimate, 
-  accounts, 
-  incomeSources,
-  handleSalarySubmit,
-  loadData
+  userId, salary, setSalary, savedSalary, taxEstimate, accounts, incomeSources, handleSalarySubmit, loadData
 }) => {
-  const [showAddSource, setShowAddSource] = useState(false);
-  const [newSource, setNewSource] = useState({ name: '', amount: '', account_id: '', is_taxed: false });
-  const [taxProfile, setTaxProfile] = useState({ filing_status: 'single' });
+  const [localFilingStatus, setLocalFilingStatus] = useState(savedSalary?.filing_status || 'single');
+  const [isHourly, setIsHourly] = useState(savedSalary?.is_hourly || false);
+  const [hourlyRate, setHourlyRate] = useState(savedSalary?.hourly_rate || 0);
+  const [hoursPerWeek, setHoursPerWeek] = useState(savedSalary?.hours_per_week || 40);
+  const [annualGross, setAnnualGross] = useState(savedSalary?.annual_salary || 0);
+  const [pct401k, setPct401k] = useState(savedSalary?.['401k_percent'] || 0);
+  
+  const [useManualTax, setUseManualTax] = useState(savedSalary?.use_manual_tax || false);
+  const [manualTaxAmount, setManualTaxAmount] = useState(savedSalary?.manual_tax_amount || 0);
+
+  const [newDeduction, setNewDeduction] = useState({ name: '', amount: '', is_pre_tax: true });
+  const [newSource, setNewSource] = useState({ name: '', amount: '', is_taxed: false });
 
   useEffect(() => {
-    const loadProfile = async () => {
-      await seedTaxBrackets();
-      const profile = await fetchTaxProfile();
-      if (profile) setTaxProfile(profile);
-    };
-    loadProfile();
-  }, [userId]);
+    if (savedSalary) {
+      setLocalFilingStatus(savedSalary.filing_status || 'single');
+      setIsHourly(savedSalary.is_hourly || false);
+      setHourlyRate(savedSalary.hourly_rate || 0);
+      setHoursPerWeek(savedSalary.hours_per_week || 40);
+      setAnnualGross(savedSalary.annual_salary || 0);
+      setPct401k(savedSalary['401k_percent'] || 0);
+      setUseManualTax(savedSalary.use_manual_tax || false);
+      setManualTaxAmount(savedSalary.manual_tax_amount || 0);
+    }
+  }, [savedSalary]);
 
   const safeFormat = (val: any) => {
     const num = parseFloat(val || '0');
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const baseMonthlyNet = parseFloat(taxEstimate?.monthly_net || '0');
-  const totalAdditionalMonthly = (incomeSources || []).reduce((sum, src) => sum + parseFloat(src.amount || '0'), 0);
-  const totalMonthlyNet = baseMonthlyNet + totalAdditionalMonthly;
-
-  const handleCreateSource = async (e: React.FormEvent) => {
+  const onSaveProfile = (e: React.FormEvent) => {
     e.preventDefault();
-    await createIncomeSource({
-      user_id: userId,
-      name: newSource.name,
-      amount: parseFloat(newSource.amount),
-      account_id: newSource.account_id || null,
-      is_taxed: newSource.is_taxed
-    });
-    setNewSource({ name: '', amount: '', account_id: '', is_taxed: false });
-    setShowAddSource(false);
+    const payload = {
+      is_hourly: isHourly,
+      hourly_rate: hourlyRate,
+      hours_per_week: hoursPerWeek,
+      annual_salary: annualGross,
+      contribution_401k_percent: pct401k,
+      use_manual_tax: useManualTax,
+      manual_tax_amount: manualTaxAmount
+    };
+    (handleSalarySubmit as any)(e, localFilingStatus, payload);
+  };
+
+  const onAddDeduction = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await addDeduction(newDeduction);
+    setNewDeduction({ name: '', amount: '', is_pre_tax: true });
     loadData();
   };
 
-  const handleDeleteSource = async (id: string, name: string) => {
-    if (window.confirm(`Remove income source "${name}"?`)) {
-      await deleteIncomeSource(id);
-      loadData();
-    }
-  };
-
-  const handleStatusChange = async (status: string) => {
-    await updateTaxProfile({ user_id: userId, filing_status: status });
-    setTaxProfile({ filing_status: status });
+  const onAddSource = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await createIncomeSource({ ...newSource, user_id: userId });
+    setNewSource({ name: '', amount: '', is_taxed: false });
     loadData();
   };
-
-  const cashAccounts = (accounts || []).filter(acc => 
-    acc && (['Checking', 'Savings', 'Cash Accounts'].includes(acc.type) || acc.group_name === 'Cash Accounts')
-  );
 
   return (
-    <div className="income-page" style={{ maxWidth: '900px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <UserGuide guideKey="income" title="Income">
-        <p>This tab is where you define your total monthly cash inflow. Accuracy here is key for your overall budget.</p>
-        <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-          <li><strong>Primary Salary:</strong> Enter your annual gross pay and 401k percentage. We use official 2025 tax brackets to calculate your estimated take-home pay.</li>
-          <li><strong>Filing Status:</strong> Choose your tax filing status. This significantly impacts your tax liability and monthly net pay.</li>
-          <li><strong>Additional Income:</strong> Add side-gigs, rental income, or other recurring deposits here.</li>
-          <li><strong>Net Take-Home:</strong> The final number at the bottom is what fuels your monthly budget.</li>
-        </ul>
+    <div className="income-page" style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: '25px' }}>
+      <UserGuide guideKey="income_v4" title="Income Architect">
+        <p>Build your monthly net income step-by-step. Start with your gross earnings, add deductions, and verify your taxes.</p>
       </UserGuide>
 
-      <h2 style={{ margin: 0 }}>Income Management</h2>
-      
-      {/* 1. Primary Annual Salary */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)', fontSize: '1.1rem' }}>1. Primary Annual Salary</h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Set your gross income and filing status for 2025.</p>
+      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr', gap: '25px', alignItems: 'start' }}>
         
-        <div style={{ marginBottom: '25px', display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Tax Filing Status</label>
-            <select value={taxProfile.filing_status} onChange={e => handleStatusChange(e.target.value)}>
-              <option value="single">Single</option>
-              <option value="married_joint">Married Filing Jointly</option>
-              <option value="married_separate">Married Filing Separately</option>
-              <option value="head_household">Head of Household</option>
-              <option value="widow">Qualifying Surviving Spouse</option>
-            </select>
+        {/* STEP 1: EARNINGS */}
+        <section className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '5px' }}>STEP 1</div>
+          <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 900 }}>BASE EARNINGS</h3>
+          
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
+            <button 
+              onClick={() => setIsHourly(false)}
+              style={{ flex: 1, fontSize: '0.7rem', background: !isHourly ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: !isHourly ? 'white' : 'var(--text)', border: '1px solid var(--border)' }}
+            >SALARY</button>
+            <button 
+              onClick={() => setIsHourly(true)}
+              style={{ flex: 1, fontSize: '0.7rem', background: isHourly ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: isHourly ? 'white' : 'var(--text)', border: '1px solid var(--border)' }}
+            >HOURLY</button>
           </div>
-        </div>
 
-        <form onSubmit={handleSalarySubmit} className="grid" style={{ gridTemplateColumns: '1fr 1fr auto', gap: '20px', alignItems: 'flex-end', borderTop: '1px solid var(--border)', paddingTop: '25px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Annual Gross ($)</label>
-            <input 
-              type="number" 
-              value={salary?.annual_salary === 0 ? '' : salary?.annual_salary} 
-              placeholder="0"
-              onChange={e => setSalary({...salary, annual_salary: e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
-            />
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>401k Contribution (%)</label>
-            <input 
-              type="number" 
-              value={salary?.['401k_percent'] === 0 ? '' : salary?.['401k_percent']} 
-              placeholder="0"
-              onChange={e => setSalary({...salary, '401k_percent': e.target.value === '' ? 0 : parseFloat(e.target.value)})} 
-            />
-          </div>
-          <button type="submit" style={{ width: 'auto', padding: '12px 25px' }}>Update</button>
-        </form>
-      </div>
+          <form onSubmit={onSaveProfile} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+            {isHourly ? (
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                <div className="form-group">
+                  <label>Hourly Rate ($)</label>
+                  <input type="number" step="0.01" value={hourlyRate} onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} />
+                </div>
+                <div className="form-group">
+                  <label>Hours / Week</label>
+                  <input type="number" value={hoursPerWeek} onChange={e => setHoursPerWeek(parseInt(e.target.value) || 0)} />
+                </div>
+              </div>
+            ) : (
+              <div className="form-group">
+                <label>Annual Gross Salary ($)</label>
+                <input type="number" value={annualGross} onChange={e => setAnnualGross(parseFloat(e.target.value) || 0)} />
+              </div>
+            )}
 
-      {/* 2. Additional Income Sources */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-          <h3 style={{ margin: 0, color: 'var(--primary)', fontSize: '1.1rem' }}>2. Additional Income</h3>
-          {!showAddSource ? (
-            <button onClick={() => setShowAddSource(true)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.8rem' }}>+ Add Source</button>
-          ) : (
-            <button onClick={() => setShowAddSource(false)} style={{ width: 'auto', padding: '8px 16px', fontSize: '0.8rem', background: 'var(--text-muted)' }}>Cancel</button>
-          )}
-        </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Extra recurring monthly deposits.</p>
-
-        {showAddSource && (
-          <form onSubmit={handleCreateSource} className="grid" style={{ gridTemplateColumns: '1fr 1fr 1fr auto', gap: '15px', alignItems: 'flex-end', background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Name</label>
-              <input required placeholder="e.g. Side Gig" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Amount ($)</label>
-              <input required type="number" placeholder="0.00" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} />
-            </div>
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <label>Deposit To</label>
-              <select value={newSource.account_id} onChange={e => setNewSource({...newSource, account_id: e.target.value})}>
-                <option value="">No Account</option>
-                {cashAccounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}
+            <div className="form-group">
+              <label>Filing Status</label>
+              <select value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}>
+                <option value="single">Single</option>
+                <option value="married_joint">Married Filing Jointly</option>
+                <option value="married_separate">Married Filing Separately</option>
+                <option value="head_household">Head of Household</option>
+                <option value="widow">Qualifying Surviving Spouse</option>
               </select>
             </div>
-            <div className="form-group" style={{ marginBottom: 0, display: 'flex', alignItems: 'center', gap: '10px' }}>
-              <input 
-                type="checkbox" 
-                checked={newSource.is_taxed} 
-                onChange={e => setNewSource({...newSource, is_taxed: e.target.checked})} 
-                style={{ width: '20px', height: '20px', cursor: 'pointer', marginTop: '20px' }}
-              />
-              <label style={{ marginBottom: 0, marginTop: '20px' }}>Taxed?</label>
-            </div>
-            <button type="submit" style={{ width: 'auto', padding: '12px 20px' }}>Add</button>
-          </form>
-        )}
 
-        {(!incomeSources || incomeSources.length === 0) ? (
-          <div style={{ padding: '30px', textAlign: 'center', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px dashed var(--border)' }}>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', margin: 0 }}>No additional sources found.</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-            {incomeSources.map(src => (
-              <div key={src.id} style={{ padding: '12px 20px', background: 'rgba(34, 197, 94, 0.1)', border: '1px solid rgba(34, 197, 94, 0.2)', borderRadius: '30px', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ display: 'flex', flexDirection: 'column' }}>
-                  <strong style={{ fontSize: '0.9rem' }}>{src.name}</strong>
-                  {src.is_taxed && <span style={{ fontSize: '0.65rem', color: 'var(--success)', fontWeight: 800 }}>TAXED</span>}
-                </div>
-                <span className="currency positive" style={{ fontSize: '1rem' }}>+${safeFormat(src.amount)}</span>
-                <button 
-                  onClick={() => handleDeleteSource(src.id, src.name)}
-                  style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', padding: '0 0 0 5px', width: 'auto', marginTop: 0, boxShadow: 'none' }}
-                >&times;</button>
+            <div style={{ padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                <span>Estimated Annual:</span>
+                <strong style={{ color: 'var(--text)' }}>${safeFormat(isHourly ? hourlyRate * hoursPerWeek * 52 : annualGross)}</strong>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                <span>Estimated Monthly:</span>
+                <strong style={{ color: 'var(--text)' }}>${safeFormat((isHourly ? hourlyRate * hoursPerWeek * 52 : annualGross) / 12)}</strong>
+              </div>
+            </div>
 
-      {/* 3. Automated Tax Assessment */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)' }}>
-        <h3 style={{ margin: '0 0 10px 0', color: 'var(--primary)', fontSize: '1.1rem' }}>3. Tax Assessment (2025)</h3>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginBottom: '20px' }}>Estimates based on your "{taxProfile.filing_status.replace('_', ' ')}" status.</p>
-        <TaxEstimator refreshTrigger={0} showTitle={false} />
-      </div>
+            <button type="submit" style={{ background: 'var(--primary)', fontWeight: 800 }}>SYNC EARNINGS</button>
+          </form>
+        </section>
 
-      {/* 4. Monthly Net Take-Home */}
-      <div className="card" style={{ borderLeft: '5px solid var(--primary)', background: 'var(--card)' }}>
-        <h3 style={{ margin: '0 0 25px 0', color: 'var(--primary)', fontSize: '1.1rem' }}>4. Final Monthly Net Take-Home</h3>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-            <span style={{ fontWeight: 600 }}>Base Salary (After Tax/401k)</span>
-            <span style={{ fontWeight: 700 }} className="currency positive">${safeFormat(baseMonthlyNet)}</span>
-          </div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--text-muted)' }}>
-            <span style={{ fontWeight: 600 }}>Additional Income</span>
-            <span style={{ fontWeight: 700 }} className="currency positive">+${safeFormat(totalAdditionalMonthly)}</span>
-          </div>
-          <div style={{ borderTop: '2px solid var(--border)', paddingTop: '20px', marginTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: '1.5rem', fontWeight: 800 }}>Final Monthly Net</span>
-            <span style={{ fontSize: '2.5rem', fontWeight: 900 }} className="currency positive">${safeFormat(totalMonthlyNet)}</span>
-          </div>
+        {/* STEP 2: DEDUCTIONS */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+          <section className="card" style={{ borderLeft: '5px solid var(--warning)' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--warning)', marginBottom: '5px' }}>STEP 2</div>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 900 }}>DEDUCTIONS</h3>
+            
+            <div className="form-group" style={{ marginBottom: '20px' }}>
+              <label>401k Contribution (%)</label>
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input type="number" value={pct401k} onChange={e => setPct401k(parseFloat(e.target.value) || 0)} />
+                <button onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--warning)', color: 'black' }}>SET</button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '20px' }}>
+              {(savedSalary?.custom_deductions || []).map((d: any) => (
+                <div key={d.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.85rem' }}>{d.name}</span>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-${safeFormat(d.amount)}</span>
+                    <button onClick={async () => { await deleteDeduction(d.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={onAddDeduction} style={{ padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+              <div className="form-group"><label style={{ fontSize: '0.7rem' }}>New Deduction (Health, HSA, etc)</label><input placeholder="Name" value={newDeduction.name} onChange={e => setNewDeduction({...newDeduction, name: e.target.value})} /></div>
+              <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
+                <input type="number" placeholder="Monthly $" value={newDeduction.amount} onChange={e => setNewDeduction({...newDeduction, amount: e.target.value})} />
+                <button type="submit" style={{ width: 'auto', background: 'rgba(255,255,255,0.1)' }}>ADD</button>
+              </div>
+            </form>
+          </section>
+
+          <section className="card" style={{ borderLeft: '5px solid var(--success)' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--success)', marginBottom: '5px' }}>STEP 3</div>
+            <h3 style={{ margin: '0 0 20px 0', fontSize: '1.1rem', fontWeight: 900 }}>OTHER INCOME</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '15px' }}>
+              {(incomeSources || []).map(src => (
+                <div key={src.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px', background: 'rgba(255,255,255,0.02)', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                  <span style={{ fontSize: '0.85rem' }}>{src.name} {src.is_taxed && <small style={{ color: 'var(--warning)' }}>(Taxed)</small>}</span>
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 700, color: 'var(--success)' }}>+${safeFormat(src.amount)}</span>
+                    <button onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <form onSubmit={onAddSource} style={{ padding: '15px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px' }}>
+              <input style={{ marginBottom: '10px' }} placeholder="Source Name" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} />
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <input type="number" placeholder="Monthly $" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} />
+                <button type="submit" style={{ width: 'auto', background: 'var(--success)', color: 'black' }}>ADD</button>
+              </div>
+            </form>
+          </section>
         </div>
+
+        {/* STEP 3: TAX & SUMMARY */}
+        <section className="card" style={{ background: 'var(--card)', border: '2px solid var(--border)', position: 'sticky', top: '100px' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, color: 'var(--text-muted)', marginBottom: '5px', textAlign: 'center' }}>FINAL ASSESSMENT</div>
+          <h3 style={{ margin: '0 0 25px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center' }}>NET TAKE-HOME</h3>
+          
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+              <span style={{ color: 'var(--text-muted)' }}>Monthly Gross</span>
+              <span className="currency">${safeFormat(taxEstimate?.annual_salary / 12)}</span>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem' }}>
+              <span style={{ color: 'var(--danger)' }}>401k + Deductions</span>
+              <span className="currency">-${safeFormat((taxEstimate?.deduction_401k + taxEstimate?.total_pre_tax_deductions) / 12)}</span>
+            </div>
+
+            <div style={{ padding: '15px', background: 'rgba(244, 63, 94, 0.05)', borderRadius: '12px', border: '1px solid rgba(244, 63, 94, 0.2)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--danger)' }}>FEDERAL INCOME TAX</span>
+                <button 
+                  onClick={() => { setUseManualTax(!useManualTax); onSaveProfile(new Event('submit') as any); }}
+                  style={{ width: 'auto', padding: '4px 8px', fontSize: '0.6rem', background: useManualTax ? 'var(--primary)' : 'rgba(255,255,255,0.1)' }}
+                >
+                  {useManualTax ? 'MANUAL ON' : 'AUTO-ESTIMATE'}
+                </button>
+              </div>
+              
+              {useManualTax ? (
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="number" 
+                    value={manualTaxAmount} 
+                    onChange={e => setManualTaxAmount(parseFloat(e.target.value) || 0)}
+                    style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--danger)' }}
+                  />
+                  <button onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--danger)' }}>OK</button>
+                </div>
+              ) : (
+                <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--danger)' }} className="currency">
+                  -${safeFormat(taxEstimate?.estimated_tax / 12)}
+                </div>
+              )}
+              <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', marginTop: '5px' }}>
+                {useManualTax ? '*Using user-provided monthly tax.' : `*Effective rate: ${((taxEstimate?.effective_rate || 0) * 100).toFixed(2)}%`}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', color: 'var(--success)' }}>
+              <span>Other Income</span>
+              <span className="currency">+${safeFormat(incomeSources.reduce((sum, s) => sum + parseFloat(s.amount), 0))}</span>
+            </div>
+
+            <div style={{ marginTop: '15px', padding: '20px 10px', background: 'var(--bg)', borderRadius: '16px', border: '2px solid var(--primary)', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '5px' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--primary)', letterSpacing: '0.15em' }}>VERIFIED MONTHLY NET</div>
+              <div style={{ fontSize: '2.4rem', fontWeight: 900 }} className="currency positive">
+                ${safeFormat(taxEstimate?.monthly_net + incomeSources.reduce((sum, s) => sum + parseFloat(s.amount), 0))}
+              </div>
+            </div>
+          </div>
+        </section>
+
       </div>
+
       <style>{`
-        @media (max-width: 768px) {
-          .income-page .grid {
-            grid-template-columns: 1fr !important;
-          }
+        .income-page input, .income-page select { background: rgba(255,255,255,0.05); border: 1px solid var(--border); padding: 12px; border-radius: 8px; color: var(--text); width: 100%; }
+        .income-page label { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: block; text-transform: uppercase; }
+        @media (max-width: 1024px) {
+          .income-page .grid { grid-template-columns: 1fr !important; }
+          .income-page section { position: static !important; }
         }
       `}</style>
     </div>

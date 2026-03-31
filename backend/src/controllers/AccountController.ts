@@ -6,7 +6,7 @@ export class AccountController {
   static async createAccount(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { name, type, balance, interest_rate, currency, group_name, apr, is_bill, monthly_deposit, due_day } = req.body;
+      const { name, type, balance, interest_rate, currency, group_name, apr, is_bill, monthly_deposit, due_day, loan_term } = req.body;
       const account = await AccountService.createAccount({
         user_id: userId,
         name,
@@ -18,7 +18,8 @@ export class AccountController {
         apr,
         is_bill,
         monthly_deposit,
-        due_day
+        due_day,
+        loan_term
       } as any);
       res.status(201).json(account);
     } catch (error: any) {

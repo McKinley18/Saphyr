@@ -1,34 +1,38 @@
 import db from '../database/db.js';
 
 export class TaxService {
-  static async calculateTaxEstimate(userId: string, year: number = 2025) {
+  static async calculateTaxEstimate(userId: string, year: number = 2025, overrideProfile?: any) {
     // 1. Get salary profile
-    const salaryProfile = await db('salary_profiles').where({ user_id: userId }).first();
-    const annualSalary = parseFloat(salaryProfile?.annual_salary || '0');
-    const contribution401kPercent = parseFloat(salaryProfile?.contribution_401k_percent || '0') / 100;
-
-    // 2. Get additional income sources that are TAXED
-    const taxableSources = await db('income_sources')
-      .where({ user_id: userId, is_taxed: true });
+    const salaryProfile = overrideProfile || await db('salary_profiles').where({ user_id: userId }).orderBy('updated_at', 'desc').first();
     
-    const additionalTaxableIncome = taxableSources.reduce((sum, src) => sum + (parseFloat(src.amount || '0') * 12), 0);
-
-    // 3. Get individual transactions marked as taxable income
-    const incomeResult = await db('transactions')
-      .where({ user_id: userId, type: 'income', is_taxable: true })
-      .andWhereRaw('EXTRACT(YEAR FROM date) = ?', [year])
-      .sum('amount as total_income')
-      .first();
-
-    const otherIncome = parseFloat(incomeResult?.total_income || '0') + additionalTaxableIncome;
+    let annualSalary = Number(salaryProfile?.annual_salary) || 0;
     
-    // 4. Calculate 401k deduction (Pre-tax)
+    // If hourly, calculate annual
+    if (salaryProfile?.is_hourly) {
+      const rate = Number(salaryProfile.hourly_rate) || 0;
+      const hours = Number(salaryProfile.hours_per_week) || 40;
+      annualSalary = rate * hours * 52;
+    }
+
+    // 2. Get Custom Deductions (e.g. Health Insurance, HSA)
+    const customDeductions = await db('custom_deductions').where({ user_id: userId });
+    const totalPreTaxDeductions = customDeductions
+      .filter(d => d.is_pre_tax)
+      .reduce((sum, d) => sum + (Number(d.amount) * 12), 0);
+
+    // 3. Get 401k %
+    const contribution401kPercent = Number(salaryProfile?.['401k_percent']) || 0;
     const deduction401k = annualSalary * contribution401kPercent;
-    const totalGrossIncome = annualSalary + otherIncome;
 
-    // 5. Get user tax profile (filing status)
+    // 4. Get additional income sources that are TAXED
+    const taxableSources = await db('income_sources').where({ user_id: userId, is_taxed: true });
+    const additionalTaxableIncome = taxableSources.reduce((sum, src) => sum + (Number(src.amount) || 0), 0) * 12;
+
+    const totalTaxableGross = annualSalary + additionalTaxableIncome;
+
+    // 5. Filing Status & Standard Deduction
     const profile = await db('tax_profiles').where({ user_id: userId }).first();
-    const filingStatus = profile?.filing_status || 'single';
+    const filingStatus = overrideProfile?.filing_status || profile?.filing_status || 'single';
     
     const standardDeductions: Record<string, number> = {
       'single': 15000,
@@ -39,49 +43,66 @@ export class TaxService {
     };
     const standardDeduction = standardDeductions[filingStatus] || 15000;
 
-    // 6. Calculate Taxable Income
-    const taxableIncome = Math.max(0, totalGrossIncome - deduction401k - standardDeduction);
+    // 6. Calculate Taxable Income (Base used for brackets)
+    const taxableIncome = Math.max(0, totalTaxableGross - deduction401k - totalPreTaxDeductions - standardDeduction);
 
-    // 7. Get brackets
-    const brackets = await db('tax_brackets')
-      .where({ filing_status: (filingStatus === 'widow' ? 'married_joint' : filingStatus === 'married_separate' ? 'single' : filingStatus), year })
-      .orderBy('lower_bound', 'asc');
-
-    // 8. Calculate Tax
+    // 7. Calculate Tax (Auto or Manual)
     let estimatedTax = 0;
-    if (brackets.length === 0) {
-      estimatedTax = taxableIncome * 0.15; // Fallback
+    
+    if (salaryProfile?.use_manual_tax && salaryProfile?.manual_tax_amount > 0) {
+      estimatedTax = Number(salaryProfile.manual_tax_amount);
     } else {
-      for (const bracket of brackets) {
-        const lower = parseFloat(bracket.lower_bound);
-        const upper = bracket.upper_bound ? parseFloat(bracket.upper_bound) : Infinity;
-        const rate = parseFloat(bracket.rate);
+      const brackets = await db('tax_brackets')
+        .where({ filing_status: (filingStatus === 'widow' ? 'married_joint' : filingStatus === 'married_separate' ? 'single' : filingStatus), year })
+        .orderBy('lower_bound', 'asc');
 
-        const taxableInThisBracket = Math.min(Math.max(0, taxableIncome - lower), upper - lower);
-        estimatedTax += taxableInThisBracket * rate;
+      if (brackets.length === 0) {
+        estimatedTax = taxableIncome * 0.15; 
+      } else {
+        for (const bracket of brackets) {
+          const lower = Number(bracket.lower_bound);
+          const upper = bracket.upper_bound ? Number(bracket.upper_bound) : Infinity;
+          const rate = Number(bracket.rate);
+          const taxableInThisBracket = Math.min(Math.max(0, taxableIncome - lower), upper - lower);
+          estimatedTax += taxableInThisBracket * rate;
+        }
       }
     }
 
-    const netAnnualIncome = totalGrossIncome - deduction401k - estimatedTax;
+    // 8. Final Calculation
+    const nonTaxableSources = await db('income_sources').where({ user_id: userId, is_taxed: false });
+    const additionalNonTaxableIncome = nonTaxableSources.reduce((sum, src) => sum + (Number(src.amount) || 0), 0) * 12;
+    
+    // Non-pre-tax deductions (Post-tax)
+    const postTaxDeductions = customDeductions
+      .filter(d => !d.is_pre_tax)
+      .reduce((sum, d) => sum + (Number(d.amount) * 12), 0);
+
+    const totalActualGross = totalTaxableGross + additionalNonTaxableIncome;
+    const netAnnualIncome = totalActualGross - deduction401k - totalPreTaxDeductions - estimatedTax - postTaxDeductions;
 
     return {
       year,
       filing_status: filingStatus,
       annual_salary: annualSalary,
+      is_hourly: !!salaryProfile?.is_hourly,
+      hourly_rate: Number(salaryProfile?.hourly_rate) || 0,
+      hours_per_week: Number(salaryProfile?.hours_per_week) || 0,
       deduction_401k: deduction401k,
-      other_income: otherIncome,
-      total_gross: totalGrossIncome,
+      total_pre_tax_deductions: totalPreTaxDeductions,
+      total_post_tax_deductions: postTaxDeductions,
+      total_gross: totalActualGross,
       taxable_income: taxableIncome,
-      standard_deduction: standardDeduction,
       estimated_tax: estimatedTax,
+      use_manual_tax: !!salaryProfile?.use_manual_tax,
       net_annual: netAnnualIncome,
       monthly_net: netAnnualIncome / 12,
-      effective_rate: totalGrossIncome > 0 ? (estimatedTax / totalGrossIncome) : 0
+      effective_rate: totalActualGross > 0 ? (estimatedTax / totalActualGross) : 0,
+      last_calc: new Date().toISOString()
     };
   }
 
   static async seed2025Brackets() {
-    // Note: Widow/Widower uses Married Joint brackets. Separate uses Single brackets.
     const brackets = [
       { filing_status: 'single', lower_bound: 0, upper_bound: 11925, rate: 0.10, year: 2025, region: 'federal' },
       { filing_status: 'single', lower_bound: 11925, upper_bound: 48475, rate: 0.12, year: 2025, region: 'federal' },
