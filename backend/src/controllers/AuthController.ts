@@ -19,7 +19,7 @@ export class AuthController {
       two_factor_method: user.two_factor_method,
       accent_color: user.accent_color,
       currency_symbol: user.currency_symbol,
-      visible_tabs: user.visible_tabs ? JSON.parse(user.visible_tabs) : null,
+      visible_tabs: user.visible_tabs ? (typeof user.visible_tabs === 'string' ? JSON.parse(user.visible_tabs) : user.visible_tabs) : null,
       stealth_mode: !!user.stealth_mode
     };
   }
@@ -47,7 +47,7 @@ export class AuthController {
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.status(201).json({ user: this.userResponse(user), token });
+      res.status(201).json({ user: AuthController.userResponse(user), token });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -97,7 +97,7 @@ export class AuthController {
       const updatedUser = await db('users').where({ id: user.id }).first();
 
       res.json({
-        user: this.userResponse(updatedUser),
+        user: AuthController.userResponse(updatedUser),
         token
       });
     } catch (error: any) {
@@ -217,7 +217,7 @@ export class AuthController {
 
       res.json({ 
         message: 'Preferences updated',
-        user: this.userResponse(updatedUser)
+        user: AuthController.userResponse(updatedUser)
       });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -248,7 +248,7 @@ export class AuthController {
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
       res.json({
-        user: this.userResponse(user),
+        user: AuthController.userResponse(user),
         token
       });
     } catch (error: any) {

@@ -15,18 +15,13 @@ interface TransactionsPageProps {
 }
 
 const TransactionsPage: React.FC<TransactionsPageProps> = ({ 
-  userId, 
-  accounts, 
-  transactions, 
-  budgets,
-  taxEstimate,
-  incomeSources,
-  loadData 
+  userId, accounts, transactions, budgets, taxEstimate, incomeSources, loadData 
 }) => {
   const { isPrivacyMode } = useAuth();
   const [showAddBudget, setShowAddBudget] = useState(false);
   const [newBudget, setNewBudget] = useState({ name: '', limit: '' });
   const [searchQuery, setSearchQuery] = useState('');
+  const [visibleCount, setVisibleCount] = useState(20);
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
@@ -44,14 +39,22 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
     }
   };
 
-  const filteredTransactions = (transactions || []).filter(tx => {
-    const query = searchQuery.toLowerCase();
-    return (
-      (tx.category?.toLowerCase().includes(query)) ||
-      (tx.description?.toLowerCase().includes(query)) ||
-      (tx.amount?.toString().includes(query))
-    );
-  });
+  const filteredTransactions = (transactions || [])
+    .filter(tx => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch = (
+        (tx.category?.toLowerCase().includes(query)) ||
+        (tx.description?.toLowerCase().includes(query)) ||
+        (tx.amount?.toString().includes(query))
+      );
+      
+      if (searchQuery) return matchesSearch;
+      
+      const d = new Date(tx.date);
+      return matchesSearch && d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense';
+    });
+
+  const displayTransactions = filteredTransactions.slice(0, visibleCount);
 
   const monthlyBills = (accounts || [])
     .filter(acc => acc && acc.is_bill)
@@ -61,76 +64,39 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
     .reduce((sum, src) => sum + parseFloat(src.amount || '0'), 0);
 
   const monthlyNetPay = parseFloat(taxEstimate?.monthly_net || '0');
-  
   const startingBudget = monthlyNetPay + totalAdditionalMonthly - monthlyBills;
 
   const handleCreateBudget = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await createBudget({
-        user_id: userId,
-        name: newBudget.name,
-        monthly_limit: parseFloat(newBudget.limit)
-      });
+      await createBudget({ user_id: userId, name: newBudget.name, monthly_limit: parseFloat(newBudget.limit) });
       setNewBudget({ name: '', limit: '' });
       setShowAddBudget(false);
       loadData();
-    } catch (err) {
-      console.error("Budget creation failed:", err);
-    }
+    } catch (err) { console.error("Budget creation failed:", err); }
   };
 
   const handleDeleteBudget = async (id: string, name: string) => {
-    if (window.confirm(`Delete budget box "${name}"? Transactions will remain but won't be grouped here.`)) {
-      try {
-        await deleteBudget(id);
-        loadData();
-      } catch (err) {
-        console.error("Budget delete failed:", err);
-      }
+    if (window.confirm(`Delete budget box "${name}"?`)) {
+      try { await deleteBudget(id); loadData(); } catch (err) { console.error("Budget delete failed:", err); }
     }
   };
 
   const exportToCSV = () => {
-    try {
-      const headers = ['Date', 'Category', 'Description', 'Amount', 'Type'];
-      const rows = (transactions || []).map(tx => [
-        tx.date ? tx.date.split('T')[0] : '',
-        `"${tx.category || ''}"`,
-        `"${tx.description || ''}"`,
-        tx.amount,
-        tx.type
-      ]);
-
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(r => r.join(','))
-      ].join('\n');
-      
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.setAttribute('href', url);
-      link.setAttribute('download', `transactions_${new Date().toISOString().split('T')[0]}.csv`);
-      link.style.visibility = 'hidden';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (err) {
-      console.error("Failed to export CSV:", err);
-    }
+    const headers = ['Date', 'Category', 'Description', 'Amount', 'Type'];
+    const rows = (transactions || []).map(tx => [tx.date?.split('T')[0], `"${tx.category || ''}"`, `"${tx.description || ''}"`, tx.amount, tx.type]);
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `transactions_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
   };
 
   return (
     <div className="transactions-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
       <UserGuide guideKey="transactions" title="Daily Activity">
         <p>Log your spending and stay within your limits.</p>
-        <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-          <li><strong>Budget Boxes:</strong> Create boxes for specific categories (e.g. Groceries). Set a limit to track how much you have left to spend.</li>
-          <li><strong>Logging:</strong> When you buy something, select the "Source Account" and the "Budget Box" it belongs to.</li>
-          <li><strong>Inflow:</strong> Use "Deposit / Inflow" to log money coming into your accounts (like side-gigs).</li>
-          <li><strong>Export:</strong> Click "Export CSV" to download your history for Excel or tax season.</li>
-        </ul>
       </UserGuide>
 
       <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', margin: '20px 0', gap: '20px' }}>
@@ -170,54 +136,23 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
       {/* Budget Boxes Grid */}
       <div className="grid" style={{ gap: '20px' }}>
         {(budgets || []).map(budget => {
-          const spent = (transactions || [])
-            .filter(tx => {
-              if (!tx || !tx.date) return false;
-              const d = new Date(tx.date);
-              return tx.budget_category_id === budget.id && 
-                     d.getMonth() === currentMonth && 
-                     d.getFullYear() === currentYear && 
-                     tx.type === 'expense';
-            })
-            .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
+          const spent = (transactions || []).filter(tx => {
+            if (!tx || !tx.date) return false;
+            const d = new Date(tx.date);
+            return tx.budget_category_id === budget.id && d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense';
+          }).reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
           
           const limit = parseFloat(budget.monthly_limit || '0');
           const remaining = limit - spent;
           const progress = limit > 0 ? Math.min(100, (spent / limit) * 100) : 0;
 
           return (
-            <div key={budget.id} className="card" style={{ position: 'relative', borderTop: `4px solid ${progress > 90 ? 'var(--danger)' : 'var(--primary)'}`, padding: '25px' }}>
-              <button 
-                onClick={() => handleDeleteBudget(budget.id, budget.name)}
-                style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.4rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}
-              >&times;</button>
-              
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                <div>
-                  <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', fontWeight: 800 }}>{budget.name}</h3>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginTop: '4px', letterSpacing: '0.05em' }}>Budget Box</div>
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase' }}>Limit</div>
-                  <div style={{ fontSize: '1rem', fontWeight: 800 }} className="currency">${safeFormat(limit)}</div>
-                </div>
-              </div>
-
-              <div style={{ background: 'rgba(255,255,255,0.02)', padding: '15px', borderRadius: '16px', marginBottom: '20px', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 700, textTransform: 'uppercase', marginBottom: '10px' }}>Monthly Remaining</div>
-                <div style={{ fontSize: '2.25rem', fontWeight: 900, color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }} className={`currency ${remaining >= 0 ? '' : 'negative'}`}>
-                  ${safeFormat(remaining)}
-                </div>
-              </div>
-
-              <div style={{ marginTop: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px', fontSize: '0.85rem' }}>
-                  <span style={{ fontWeight: 700, color: 'var(--text-muted)' }}>Spent: <span className="currency">${safeFormat(spent)}</span></span>
-                  <span style={{ fontWeight: 900, color: progress > 90 ? 'var(--danger)' : 'var(--primary)' }}>{progress.toFixed(0)}%</span>
-                </div>
-                <div style={{ width: '100%', height: '14px', background: 'rgba(255,255,255,0.05)', borderRadius: '7px', overflow: 'hidden' }}>
-                  <div style={{ width: `${progress}%`, height: '100%', background: progress > 90 ? 'var(--danger)' : 'var(--primary)', transition: 'width 0.8s cubic-bezier(0.4, 0, 0.2, 1)', boxShadow: progress > 90 ? '0 0 15px rgba(244, 63, 94, 0.3)' : '0 0 15px rgba(59, 130, 246, 0.3)' }}></div>
-                </div>
+            <div key={budget.id} className="card" style={{ borderTop: `4px solid ${progress > 90 ? 'var(--danger)' : 'var(--primary)'}` }}>
+              <button onClick={() => handleDeleteBudget(budget.id, budget.name)} style={{ position: 'absolute', top: '15px', right: '15px', background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
+              <h3 style={{ margin: 0, fontSize: '1.25rem', color: 'var(--text)', fontWeight: 800 }}>{budget.name}</h3>
+              <div style={{ fontSize: '2rem', fontWeight: 900, margin: '15px 0', color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }}>${safeFormat(remaining)}</div>
+              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
+                <div style={{ width: `${progress}%`, height: '100%', background: progress > 90 ? 'var(--danger)' : 'var(--primary)' }}></div>
               </div>
             </div>
           );
@@ -231,78 +166,50 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
         <section>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px' }}>
-              <h3 style={{ color: 'var(--text)', margin: 0, fontWeight: 800 }}>Recent Activity</h3>
-              <div style={{ position: 'relative', width: '100%', maxWidth: '300px' }}>
-                <input 
-                  type="text" 
-                  placeholder="Search transactions..." 
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  style={{ paddingLeft: '40px', fontSize: '0.9rem' }}
-                />
-                <span style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', opacity: 0.5 }}>🔍</span>
-              </div>
-            </div>
+            <h3 style={{ color: 'var(--text)', margin: 0, fontWeight: 800 }}>Recent Activity</h3>
+            <input type="text" placeholder="Search..." value={searchQuery} onChange={e => {setSearchQuery(e.target.value); setVisibleCount(20);}} />
 
             <div className="table-container">
               <table style={{ width: '100%', borderCollapse: 'separate', borderSpacing: 0 }}>
                 <thead>
-                  <tr style={{ textAlign: 'left', fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                    <th style={{ padding: '12px 0' }}>Date</th>
-                    <th>Vendor / Box</th>
-                    <th>Source</th>
+                  <tr style={{ textAlign: 'left', fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>
+                    <th style={{ padding: '10px 0' }}>Details</th>
                     <th style={{ textAlign: 'right' }}>Amount</th>
+                    <th style={{ width: '60px' }}></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredTransactions
-                    .filter(tx => {
-                      if (!tx || !tx.date) return false;
-                      const d = new Date(tx.date);
-                      // If searching, show all matches regardless of month
-                      if (searchQuery) return true;
-                      return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense';
-                    })
-                    .map(tx => {
-                      const acc = accounts.find(a => a.id === tx.account_id);
-                      const budget = budgets.find(b => b.id === tx.budget_category_id);
-                      return (
-                        <tr key={tx.id}>
-                          <td style={{ padding: '16px 0', display: 'flex', gap: '15px', alignItems: 'center' }}>
-                            <button 
-                              onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)}
-                              style={{ width: 'auto', background: 'none', border: 'none', boxShadow: 'none', padding: '5px', marginTop: 0, fontSize: '1rem', cursor: 'pointer', opacity: 0.4 }}
-                            >
-                              🗑️
-                            </button>
-                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{tx.date ? tx.date.split('T')[0] : ''}</span>
-                          </td>
-                          <td>
-                            <div style={{ fontWeight: 700, color: 'var(--text)', fontSize: '0.95rem' }}>{tx.category}</div>
-                            {budget && <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700, marginTop: '4px' }}>📦 {budget.name}</div>}
-                          </td>
-                          <td style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 600 }}>{acc?.name || 'Unknown'}</td>
-                          <td style={{ textAlign: 'right', fontWeight: 800, fontSize: '1.05rem' }} className="currency negative">
-                            -${safeFormat(tx.amount)}
-                          </td>
-                        </tr>
-                      );
-                    })
-                  }
+                  {displayTransactions.map(tx => {
+                    const acc = accounts.find(a => a.id === tx.account_id);
+                    const budget = budgets.find(b => b.id === tx.budget_category_id);
+                    return (
+                      <tr key={tx.id}>
+                        <td style={{ padding: '12px 0' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.9rem' }}>{tx.category}</div>
+                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{tx.date?.split('T')[0]} • {acc?.name}</div>
+                          {budget && <div style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 800, marginTop: '2px' }}>{budget.name.toUpperCase()}</div>}
+                        </td>
+                        <td style={{ textAlign: 'right', fontWeight: 800 }} className="currency negative">-${safeFormat(tx.amount)}</td>
+                        <td style={{ textAlign: 'right' }}>
+                          <button onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '0.6rem', fontWeight: 800, cursor: 'pointer', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>REMOVE</button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
+              {filteredTransactions.length > visibleCount && (
+                <button 
+                  onClick={() => setVisibleCount(prev => prev + 20)}
+                  style={{ width: '100%', marginTop: '20px', background: 'rgba(255,255,255,0.05)', color: 'var(--text)', fontWeight: 800, fontSize: '0.7rem' }}
+                >
+                  LOAD MORE
+                </button>
+              )}
             </div>
           </div>
         </section>
       </div>
-      <style>{`
-        @media (min-width: 1024px) {
-          .transactions-page > .grid:last-child {
-            grid-template-columns: 1fr 2.5fr !important;
-          }
-        }
-      `}</style>
     </div>
   );
 };

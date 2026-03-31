@@ -42,6 +42,7 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [isBlurred, setIsBlurred] = useState(false);
+  const [lastFetched, setLastFetched] = useState(0);
   
   const { user, loading: authLoading } = useAuth();
 
@@ -71,15 +72,6 @@ function AppContent() {
     }
   }, [user?.accent_color]);
 
-  console.log("App State:", { authLoading, loading, user: !!user, error });
-
-  useEffect(() => {
-    window.onerror = function(message, _source, lineno) {
-      alert(`RUNTIME ERROR: ${message} at line ${lineno}`);
-      return false;
-    };
-  }, []);
-
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     localStorage.setItem('theme', theme);
@@ -89,11 +81,15 @@ function AppContent() {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  const loadData = async () => {
+  const loadData = async (force = false) => {
     if (!user) {
       setLoading(false);
       return;
     }
+
+    // Limit reloads to once every 5 seconds unless forced
+    const now = Date.now();
+    if (!force && now - lastFetched < 5000) return;
     
     try {
       const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = await Promise.all([
@@ -115,6 +111,7 @@ function AppContent() {
       setIncomeSources(incSrcs || []);
       setSnapshots(snps || []);
       setGoals(gls || []);
+      setLastFetched(now);
       setError(null);
 
       // Daily Snapshot Capture
@@ -133,7 +130,7 @@ function AppContent() {
         });
       }
     } catch (e: any) {
-      console.error("Failed to load data", e);
+      console.error("Data Load Error:", e);
       setError(e.message);
     } finally {
       setLoading(false);
@@ -149,6 +146,7 @@ function AppContent() {
       }
     }
   }, [user, authLoading]);
+
   const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
     e.preventDefault();
     try {
@@ -163,10 +161,8 @@ function AppContent() {
         manual_tax_amount: extraData?.manual_tax_amount
       });
       
-      // Use the estimate directly from the response for 100% sync
       if (response.taxEstimate) {
         setTaxEstimate(response.taxEstimate);
-        // Also update the core salary state so display labels are fresh
         setSalary({
           annual_salary: response.taxEstimate.annual_salary,
           '401k_percent': response.taxEstimate.input_401k_percent * 100,
@@ -174,25 +170,28 @@ function AppContent() {
         });
       }
       
-      // Refresh the rest of the data in background
-      await loadData();
+      await loadData(true); // Force reload after save
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
     }
   };
 
   if (authLoading || (user && loading)) {
-    return <div className="container" style={{ padding: '100px', textAlign: 'center' }}><h3>Saphyr is loading...</h3></div>;
+    return (
+      <div className="container" style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
+        <div className="logo-icon" style={{ width: '60px', height: '60px' }}></div>
+      </div>
+    );
   }
 
   if (error && user) {
     return (
       <div className="container" style={{ padding: '50px' }}>
-        <div className="card" style={{ border: '2px solid red', textAlign: 'center' }}>
-          <h2 style={{ color: 'red' }}>⚠️ Connection Error</h2>
-          <p>We couldn't connect to the database. Make sure your server is running.</p>
-          <p style={{ fontSize: '0.8rem', color: '#64748b' }}>Error: {error}</p>
-          <button onClick={() => window.location.reload()} style={{ width: 'auto', marginTop: '20px' }}>Retry Connection</button>
+        <div className="card" style={{ border: '2px solid var(--danger)', textAlign: 'center' }}>
+          <h2 style={{ color: 'var(--danger)' }}>Connection Error</h2>
+          <p>Unable to synchronize with the Saphyr network.</p>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px' }}>{error}</p>
+          <button onClick={() => window.location.reload()} style={{ width: 'auto', marginTop: '20px' }}>RETRY CONNECTION</button>
         </div>
       </div>
     );

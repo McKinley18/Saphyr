@@ -89,11 +89,11 @@
 .logo-icon {
   width: 32px;
   height: 32px;
-  background: linear-gradient(135deg, var(--primary), #60a5fa);
+  background: var(--primary); /* Use primary color directly for maximum brightness */
   border-radius: 10px;
   transform: rotate(45deg);
   position: relative;
-  box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 15px var(--primary); /* Constant bright glow */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -103,6 +103,7 @@
   text-shadow: 0 0 10px rgba(0,0,0,0.2);
   overflow: hidden;
   animation: logoPulse 4s infinite;
+  border: 1px solid rgba(255,255,255,0.2);
 }
 
 .logo-icon::before {
@@ -131,9 +132,9 @@
 }
 
 @keyframes logoPulse {
-  0% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
-  50% { box-shadow: 0 0 35px rgba(59, 130, 246, 0.6); }
-  100% { box-shadow: 0 0 10px rgba(59, 130, 246, 0.3); }
+  0% { box-shadow: 0 0 15px var(--primary); }
+  50% { box-shadow: 0 0 30px var(--primary); }
+  100% { box-shadow: 0 0 15px var(--primary); }
 }
 
 @keyframes logoGlint {
@@ -161,7 +162,7 @@
 }
 
 .hamburger {
-  display: none; /* Hide hamburger on mobile, using bottom nav instead */
+  display: flex; /* Always show hamburger */
   align-items: center;
   justify-content: center;
   width: 40px;
@@ -174,12 +175,6 @@
   cursor: pointer;
   box-shadow: var(--shadow);
   transition: all 0.2s ease;
-}
-
-@media (min-width: 768px) {
-  .hamburger {
-    display: flex; /* Show hamburger only on desktop if menu is needed */
-  }
 }
 
 .hamburger-box {

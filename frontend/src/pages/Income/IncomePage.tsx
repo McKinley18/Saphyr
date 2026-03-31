@@ -54,17 +54,14 @@ const IncomePage: React.FC<IncomePageProps> = ({
     e.preventDefault();
     const payload = {
       is_hourly: isHourly,
-      hourly_rate: hourlyRate,
-      hours_per_week: hoursPerWeek,
-      annual_salary: isHourly ? (hourlyRate * hoursPerWeek * 52) : annualGross,
-      contribution_401k_percent: pct401k,
+      hourly_rate: Number(hourlyRate),
+      hours_per_week: Number(hoursPerWeek),
+      annual_salary: isHourly ? (Number(hourlyRate) * Number(hoursPerWeek) * 52) : Number(annualGross),
+      contribution_401k_percent: Number(pct401k),
       use_manual_tax: useManualTax,
-      manual_tax_amount: manualTaxAmount
+      manual_tax_amount: Number(manualTaxAmount)
     };
-    (handleSalarySubmit as any)(e, localFilingStatus, payload);
-    // Clear local inputs after submission to show placeholders
-    if (!isHourly) setAnnualGross(0);
-    setPct401k(0);
+    handleSalarySubmit(e, localFilingStatus, payload);
   };
 
   const onAddDeduction = async (e: React.FormEvent) => {
@@ -96,10 +93,12 @@ const IncomePage: React.FC<IncomePageProps> = ({
           
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
             <button 
+              type="button"
               onClick={() => setIsHourly(false)}
               style={{ flex: 1, fontSize: '0.7rem', background: !isHourly ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: !isHourly ? 'white' : 'var(--text)', border: '1px solid var(--border)' }}
             >SALARY</button>
             <button 
+              type="button"
               onClick={() => setIsHourly(true)}
               style={{ flex: 1, fontSize: '0.7rem', background: isHourly ? 'var(--primary)' : 'rgba(255,255,255,0.05)', color: isHourly ? 'white' : 'var(--text)', border: '1px solid var(--border)' }}
             >HOURLY</button>
@@ -160,7 +159,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <label>401k Contribution (%)</label>
               <div style={{ display: 'flex', gap: '10px' }}>
                 <input type="number" value={pct401k} onChange={e => setPct401k(parseFloat(e.target.value) || 0)} />
-                <button onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--warning)', color: 'black' }}>SET</button>
+                <button type="button" onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--warning)', color: 'black' }}>SET</button>
               </div>
             </div>
 
@@ -170,7 +169,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                   <span style={{ fontSize: '0.85rem' }}>{d.name}</span>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ fontWeight: 700, color: 'var(--danger)' }}>-${safeFormat(d.amount)}</span>
-                    <button onClick={async () => { await deleteDeduction(d.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
+                    <button type="button" onClick={async () => { await deleteDeduction(d.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
                   </div>
                 </div>
               ))}
@@ -194,7 +193,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                   <span style={{ fontSize: '0.85rem' }}>{src.name} {src.is_taxed && <small style={{ color: 'var(--warning)' }}>(Taxed)</small>}</span>
                   <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
                     <span style={{ fontWeight: 700, color: 'var(--success)' }}>+${safeFormat(src.amount)}</span>
-                    <button onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
+                    <button type="button" onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', padding: 0, width: 'auto', marginTop: 0, boxShadow: 'none' }}>&times;</button>
                   </div>
                 </div>
               ))}
@@ -229,6 +228,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
                 <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--danger)' }}>FEDERAL INCOME TAX</span>
                 <button 
+                  type="button"
                   onClick={() => { setUseManualTax(!useManualTax); onSaveProfile(new Event('submit') as any); }}
                   style={{ width: 'auto', padding: '4px 8px', fontSize: '0.6rem', background: useManualTax ? 'var(--primary)' : 'rgba(255,255,255,0.1)' }}
                 >
@@ -244,7 +244,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     onChange={e => setManualTaxAmount(parseFloat(e.target.value) || 0)}
                     style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--danger)' }}
                   />
-                  <button onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--danger)' }}>OK</button>
+                  <button type="button" onClick={onSaveProfile} style={{ width: 'auto', background: 'var(--danger)' }}>OK</button>
                 </div>
               ) : (
                 <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--danger)' }} className="currency">

@@ -27,8 +27,10 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
     { path: '/settings', label: 'Settings' },
   ];
 
-  const visiblePaths = user?.visible_tabs || allTabs.map(t => t.path);
-  const filteredTabs = allTabs.filter(tab => visiblePaths.includes(tab.path));
+  const visibleTabs = user?.visible_tabs;
+  const filteredTabs = Array.isArray(visibleTabs) && visibleTabs.length > 0
+    ? allTabs.filter(tab => visibleTabs.includes(tab.path))
+    : allTabs;
 
   // For Bottom Nav (Mobile), we show the first 4-5 visible main tabs
   const bottomNavTabs = filteredTabs.filter(t => ['/', '/accounts', '/bills', '/transactions', '/settings'].includes(t.path)).slice(0, 5);
