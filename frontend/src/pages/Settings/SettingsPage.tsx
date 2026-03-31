@@ -89,17 +89,6 @@ const SettingsPage: React.FC = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'First session';
-    const date = new Date(dateString);
-    return date.toLocaleString(undefined, { 
-      month: 'short', 
-      day: 'numeric', 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
-
   const handleExportCSV = async () => {
     try {
       const [accounts, transactions] = await Promise.all([

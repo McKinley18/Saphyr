@@ -2,8 +2,6 @@ import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { useAuth } from '../../context/AuthContext';
-import { deleteTransaction } from '../../services/api';
-import { getOrdinal } from '../../services/utils';
 import {
   DndContext,
   closestCenter,
@@ -27,7 +25,6 @@ interface DashboardProps {
   accounts: any[];
   transactions: any[];
   incomeSources: any[];
-  loadData?: () => void;
 }
 
 const SortableItem = React.memo((props: { id: string; children: React.ReactNode; isEditMode: boolean }) => {
@@ -80,8 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({
   taxEstimate,
   accounts,
   transactions,
-  incomeSources,
-  loadData
+  incomeSources
 }) => {
   const { isPrivacyMode, togglePrivacyMode, isEditMode } = useAuth();
   const navigate = useNavigate();
@@ -157,8 +153,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       dailyPower,
       totalCash,
       totalDebt,
-      netWorth: totalCash - totalDebt,
-      monthlyInflow: monthlyNetPay + totalAdditionalMonthly
+      netWorth: totalCash - totalDebt
     };
   }, [accounts, transactions, incomeSources, taxEstimate]);
 
