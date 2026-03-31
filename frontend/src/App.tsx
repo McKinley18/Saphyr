@@ -36,8 +36,7 @@ function AppContent() {
   const [incomeSources, setIncomeSources] = useState<any[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
   const [goals, setGoals] = useState<any[]>([]);
-  const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0 });
-  const [salaryInput, setSalaryInput] = useState({ annual_salary: 0, '401k_percent': 0 });
+  const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,8 +109,7 @@ function AppContent() {
       
       setAccounts(accs || []);
       setTransactions(txs || []);
-      setSalary(sal || { annual_salary: 0, '401k_percent': 0 });
-      setSalaryInput(sal || { annual_salary: 0, '401k_percent': 0 });
+      setSalary(sal || { annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
       setTaxEstimate(tax);
       setBudgets(bdgs || []);
       setIncomeSources(incSrcs || []);
@@ -151,13 +149,18 @@ function AppContent() {
       }
     }
   }, [user, authLoading]);
-  const handleSalarySubmit = async (e: any, filingStatus?: string) => {
+  const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
     e.preventDefault();
     try {
       const response = await updateSalaryProfile({
-        annual_salary: salaryInput.annual_salary,
-        contribution_401k_percent: salaryInput['401k_percent'],
-        filing_status: filingStatus
+        annual_salary: extraData?.annual_salary,
+        contribution_401k_percent: extraData?.contribution_401k_percent,
+        filing_status: filingStatus,
+        is_hourly: extraData?.is_hourly,
+        hourly_rate: extraData?.hourly_rate,
+        hours_per_week: extraData?.hours_per_week,
+        use_manual_tax: extraData?.use_manual_tax,
+        manual_tax_amount: extraData?.manual_tax_amount
       });
       
       // Use the estimate directly from the response for 100% sync
@@ -165,7 +168,7 @@ function AppContent() {
         setTaxEstimate(response.taxEstimate);
         // Also update the core salary state so display labels are fresh
         setSalary({
-          annual_salary: response.taxEstimate.input_salary,
+          annual_salary: response.taxEstimate.annual_salary,
           '401k_percent': response.taxEstimate.input_401k_percent * 100,
           filing_status: response.taxEstimate.filing_status
         });
@@ -173,9 +176,6 @@ function AppContent() {
       
       // Refresh the rest of the data in background
       await loadData();
-      
-      // Reset only the input boxes to zero as requested
-      setSalaryInput({ annual_salary: 0, '401k_percent': 0 });
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
     }

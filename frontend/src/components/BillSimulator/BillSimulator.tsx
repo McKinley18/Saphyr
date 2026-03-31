@@ -27,7 +27,6 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
   const compatibleBills = selectedBills.filter(b => b.apr > 0 && b.loan_term > 0);
   
   const totalMonthlyInterestSaved = compatibleBills.reduce((sum, b) => {
-    const balance = Math.abs(parseFloat(b.balance));
     const apr = parseFloat(b.apr);
     // Interest savings = (Extra Payment * APR) / 12 (Simplified for 1 month)
     // But let's show total interest impact

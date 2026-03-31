@@ -4,24 +4,20 @@ import {
   createIncomeSource, 
   deleteIncomeSource,
   addDeduction,
-  deleteDeduction,
-  updateSalaryProfile
+  deleteDeduction
 } from '../../services/api';
 
 interface IncomePageProps {
   userId: string;
-  salary: any; 
-  setSalary: (s: any) => void;
   savedSalary: any; 
   taxEstimate: any;
-  accounts: any[];
   incomeSources: any[];
   handleSalarySubmit: (e: any, status: string, extraData?: any) => void;
   loadData: () => void;
 }
 
 const IncomePage: React.FC<IncomePageProps> = ({ 
-  userId, salary, setSalary, savedSalary, taxEstimate, accounts, incomeSources, handleSalarySubmit, loadData
+  userId, savedSalary, taxEstimate, incomeSources, handleSalarySubmit, loadData
 }) => {
   const [localFilingStatus, setLocalFilingStatus] = useState(savedSalary?.filing_status || 'single');
   const [isHourly, setIsHourly] = useState(savedSalary?.is_hourly || false);
@@ -60,12 +56,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
       is_hourly: isHourly,
       hourly_rate: hourlyRate,
       hours_per_week: hoursPerWeek,
-      annual_salary: annualGross,
+      annual_salary: isHourly ? (hourlyRate * hoursPerWeek * 52) : annualGross,
       contribution_401k_percent: pct401k,
       use_manual_tax: useManualTax,
       manual_tax_amount: manualTaxAmount
     };
     (handleSalarySubmit as any)(e, localFilingStatus, payload);
+    // Clear local inputs after submission to show placeholders
+    if (!isHourly) setAnnualGross(0);
+    setPct401k(0);
   };
 
   const onAddDeduction = async (e: React.FormEvent) => {
