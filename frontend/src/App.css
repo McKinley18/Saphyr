@@ -1,10 +1,10 @@
 :root {
   --primary: #3b82f6; 
   --primary-rgb: 59, 130, 246;
-  --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
-  --success-gradient: linear-gradient(135deg, #10b981 0%, #065f46 100%);
-  --danger-gradient: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
-  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #92400e 100%);
+  --primary-gradient: linear-gradient(135deg, #1e40af 0%, #3b82f6 30%, #ffffff 50%, #3b82f6 70%, #1e40af 100%);
+  --success-gradient: linear-gradient(135deg, #065f46 0%, #10b981 30%, #ffffff 50%, #10b981 70%, #065f46 100%);
+  --danger-gradient: linear-gradient(135deg, #991b1b 0%, #ef4444 30%, #ffffff 50%, #ef4444 70%, #991b1b 100%);
+  --warning-gradient: linear-gradient(135deg, #92400e 0%, #f59e0b 30%, #ffffff 50%, #f59e0b 70%, #92400e 100%);
   --radius: 20px;
   --success: #10b981; 
   --danger: #ef4444;
@@ -12,35 +12,51 @@
 }
 
 [data-theme='dark'] {
-  --bg: #000000;
-  --card: #000000;
+  --bg: #09090b;
+  --card: #09090b;
   --text: #f8fafc;
   --text-muted: #94a3b8;
-  --border: #1e293b; 
-  --shadow: 0 0 0 1px #1e293b;
-  --input-bg: #0a0a0a;
+  --border: #27272a; 
+  --shadow: 0 0 0 1px #27272a;
+  --input-bg: #18181b;
   --accent-glow: rgba(59, 130, 246, 0.2);
-  --item-divider: #1e293b;
+  --item-divider: #27272a;
   --inactive-bg: rgba(255, 255, 255, 0.05);
   --inactive-text: #64748b;
-  --subtle-overlay: rgba(255, 255, 255, 0.02);
+  --subtle-overlay: rgba(255, 255, 255, 0.03);
   --blueprint-grid: rgba(255, 255, 255, 0.03);
 }
 
+[data-theme='oled'] {
+  --bg: #000000;
+  --card: #000000;
+  --text: #ffffff;
+  --text-muted: #94a3b8;
+  --border: #27272a; 
+  --shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.4);
+  --input-bg: #050505;
+  --accent-glow: rgba(59, 130, 246, 0.4);
+  --item-divider: #27272a;
+  --inactive-bg: rgba(255, 255, 255, 0.1);
+  --inactive-text: #475569;
+  --subtle-overlay: rgba(255, 255, 255, 0.04);
+  --blueprint-grid: rgba(255, 255, 255, 0.05);
+}
+
 [data-theme='light'] {
-  --bg: #eef6ff;
+  --bg: #f4f7fb;
   --card: #ffffff;
   --text: #0f172a;
-  --text-muted: #475569;
-  --border: #bfdbfe; 
-  --shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.15);
-  --input-bg: #f8faff;
-  --accent-glow: rgba(59, 130, 246, 0.1);
-  --item-divider: #dbeafe;
-  --inactive-bg: #dbeafe; 
+  --text-muted: #64748b;
+  --border: #cbd5e1; 
+  --shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.05);
+  --input-bg: #f8fafc;
+  --accent-glow: rgba(59, 130, 246, 0.15);
+  --item-divider: #e2e8f0;
+  --inactive-bg: #e2e8f0; 
   --inactive-text: #1e40af;
-  --subtle-overlay: rgba(59, 130, 246, 0.04);
-  --blueprint-grid: rgba(59, 130, 246, 0.08);
+  --subtle-overlay: rgba(59, 130, 246, 0.06);
+  --blueprint-grid: rgba(59, 130, 246, 0.1);
 }
 
 body {
@@ -124,7 +140,7 @@ body {
   position: absolute;
   top: 0;
   left: 0;
-  background: transparent;
+  background-repeat: no-repeat;
   z-index: 1;
 }
 
@@ -132,19 +148,33 @@ body {
 .card::before {
   right: 0;
   height: 4px;
+  background-size: 600% 100%;
+  animation: shimmerX 5s linear infinite alternate;
 }
 
 /* Left Glow Bar */
 .card::after {
   bottom: 0;
   width: 5px;
+  background-size: 100% 600%;
+  animation: shimmerY 5s linear infinite alternate;
+}
+
+@keyframes shimmerX {
+  0% { background-position: 100% 0; }
+  100% { background-position: 0 0; }
+}
+
+@keyframes shimmerY {
+  0% { background-position: 0 100%; }
+  100% { background-position: 0 0; }
 }
 
 .glow-primary::before, .glow-primary::after { background: var(--primary-gradient); }
 .glow-success::before, .glow-success::after { background: var(--success-gradient); }
 .glow-danger::before, .glow-danger::after { background: var(--danger-gradient); }
 .glow-warning::before, .glow-warning::after { background: var(--warning-gradient); }
-.glow-saphyr::before, .glow-saphyr::after { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
+.glow-saphyr::before, .glow-saphyr::after { background: linear-gradient(135deg, #1e40af 0%, #3b82f6 30%, #ffffff 50%, #3b82f6 70%, #1e40af 100%); }
 
 .card.highlight:hover, .ticker-item:hover, .workflow-item:hover {
   transform: translateY(-2px);
@@ -281,24 +311,18 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .forge-logo {
   width: 420px;
   height: 420px;
-  background: var(--primary-gradient);
-  border-radius: 80px;
-  transform: rotate(45deg);
+  background: linear-gradient(135deg, #93c5fd 0%, #3b82f6 30%, #1e40af 80%, #172554 100%);
+  clip-path: polygon(25% 0%, 75% 0%, 100% 25%, 50% 100%, 0% 25%);
   position: relative;
-  /* Immense radiant multi-layer glow */
-  box-shadow: 
-    0 0 80px var(--accent-glow),
-    0 0 160px var(--accent-glow),
-    0 0 240px rgba(59, 130, 246, 0.6);
+  /* Radiant multi-layer glow adapted for clip-path */
+  filter: drop-shadow(0 0 40px rgba(59, 130, 246, 0.4)) drop-shadow(0 0 80px rgba(59, 130, 246, 0.2));
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 6px solid rgba(255, 255, 255, 0.8);
-  /* Entrance sequence followed by a constant radiant glow */
+  /* Entrance sequence followed by pulse */
   animation: 
     forgeEntrance 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-  overflow: hidden;
 }
 
 .forge-logo::before {
@@ -306,8 +330,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   color: white;
   font-size: 15rem;
   font-weight: 900;
-  transform: rotate(-45deg); /* Target rotation */
-  text-shadow: 0 0 60px rgba(0,0,0,0.6);
+  text-shadow: 0 5px 15px rgba(0,0,0,0.5);
   z-index: 2;
   /* Spin S into position independently */
   animation: sRotateIn 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
@@ -317,41 +340,38 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   content: '';
   position: absolute;
   top: -50%;
-  left: -150%;
-  width: 100%; /* Wider glint for bigger logo */
+  left: -200%;
+  width: 200%;
   height: 200%;
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0) 0%,
-    rgba(255, 255, 255, 0.1) 30%,
-    rgba(255, 255, 255, 0.95) 50%,
-    rgba(255, 255, 255, 0.1) 70%,
+    rgba(255, 255, 255, 0) 45%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0) 55%,
     rgba(255, 255, 255, 0) 100%
   );
   transform: rotate(25deg);
-  /* Glint triggers after the S settles */
-  animation: forgeGlint 4s infinite cubic-bezier(0.4, 0, 0.2, 1) 1.2s;
+  animation: forgeGlint 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
   pointer-events: none;
   z-index: 3;
 }
 
 @keyframes forgeEntrance {
-  0% { transform: rotate(0deg) scale(0.3); opacity: 0; }
-  100% { transform: rotate(45deg) scale(1); opacity: 1; }
+  0% { transform: scale(0.3); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 @keyframes sRotateIn {
-  0% { transform: rotate(-225deg) scale(0); opacity: 0; }
-  60% { transform: rotate(-45deg) scale(1.1); opacity: 1; }
-  100% { transform: rotate(-45deg) scale(1); opacity: 1; }
+  0% { transform: translateY(40px) scale(0); opacity: 0; }
+  60% { transform: translateY(-20px) scale(1.1); opacity: 1; }
+  100% { transform: translateY(-20px) scale(1); opacity: 1; }
 }
 
 @keyframes forgeGlint {
-  0% { left: -150%; opacity: 0; }
-  5% { opacity: 1; }
-  25% { left: 150%; opacity: 1; }
-  30% { left: 150%; opacity: 0; }
-  100% { left: 150%; opacity: 0; }
+  0% { left: -200%; }
+  30% { left: 200%; }
+  100% { left: 200%; }
 }
 
 @media (max-width: 768px) {

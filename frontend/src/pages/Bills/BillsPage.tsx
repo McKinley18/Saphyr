@@ -123,8 +123,8 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
               <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>OBLIGATIONS</h3>
               <div style={{ display: 'flex', background: 'var(--subtle-overlay)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <button onClick={() => setViewMode('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TABLE</button>
-                <button onClick={() => setViewMode('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
+                <button onClick={() => setViewMode('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: viewMode === 'table' ? 'white' : 'var(--text)', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TABLE</button>
+                <button onClick={() => setViewMode('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: viewMode === 'box' ? 'white' : 'var(--text)', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
               </div>
             </div>
 

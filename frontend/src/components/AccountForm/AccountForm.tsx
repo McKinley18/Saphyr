@@ -83,7 +83,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Balance</label>
-            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+            <div className="currency-input-wrapper">
               <span className="currency-prefix" style={{ color: accent }}>$</span>
               <input 
                 required 
@@ -112,7 +112,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Monthly Inflow</label>
-            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+            <div className="currency-input-wrapper">
               <span className="currency-prefix" style={{ color: accent }}>$</span>
               <input 
                 type="number" 

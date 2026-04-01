@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { createBudget, deleteBudget, deleteTransaction } from '../../services/api';
 import TransactionForm from '../../components/TransactionForm/TransactionForm';
+import CsvImport from '../../components/CsvImport/CsvImport';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
 
@@ -23,6 +24,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const { isPrivacyMode, isEditMode } = useAuth();
   const { confirm } = useModal();
   const [showAddBudget, setShowAddBudget] = useState(false);
+  const [showCsvImport, setShowCsvImport] = useState(false);
   const [newBudget, setNewBudget] = useState({ name: '', limit: '' });
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
@@ -140,17 +142,27 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
       <div className="accounts-grid-layout">
         <div className="workflow-column">
-          <section className="card" style={{ borderTop: `4px solid ${boxColors['log'] || 'var(--primary)'}`, borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
-            {renderColorPicker('log')}
-            <TransactionForm accounts={accounts} budgets={budgets} userId={userId} onTransactionAdded={loadData} customColor={boxColors['log'] || 'var(--primary)'} />
-          </section>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '15px' }}>
+            <button onClick={() => setShowCsvImport(!showCsvImport)} style={{ fontSize: '0.65rem', fontWeight: 900, background: showCsvImport ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: showCsvImport ? 'white' : 'var(--text)', border: '1px solid var(--border)', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer' }}>
+              {showCsvImport ? 'MANUAL LOG' : 'BULK IMPORT (CSV)'}
+            </button>
+          </div>
+
+          {showCsvImport ? (
+            <CsvImport userId={userId} accounts={accounts} onImportComplete={() => { setShowCsvImport(false); loadData(); }} onCancel={() => setShowCsvImport(false)} />
+          ) : (
+            <section className="card" style={{ borderTop: `4px solid ${boxColors['log'] || 'var(--primary)'}`, borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
+              {renderColorPicker('log')}
+              <TransactionForm accounts={accounts} budgets={budgets} userId={userId} onTransactionAdded={loadData} customColor={boxColors['log'] || 'var(--primary)'} />
+            </section>
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>BUDGET BOXES</h3>
             <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
               <div style={{ display: 'flex', background: 'var(--subtle-overlay)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <button onClick={() => setViewMode('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TABLE</button>
-                <button onClick={() => setViewMode('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
+                <button onClick={() => setViewMode('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: viewMode === 'table' ? 'white' : 'var(--text)', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TABLE</button>
+                <button onClick={() => setViewMode('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: viewMode === 'box' ? 'white' : 'var(--text)', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
               </div>
               <button onClick={() => setShowAddBudget(!showAddBudget)} className="add-goal-btn" style={{ fontSize: '0.65rem' }}>{showAddBudget ? 'CANCEL' : '+ NEW BOX'}</button>
             </div>

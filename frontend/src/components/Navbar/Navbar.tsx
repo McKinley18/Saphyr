@@ -59,7 +59,9 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
       <nav className="navbar" ref={menuRef}>
         <div className="navbar-container">
           <Link to="/" className="navbar-logo" onClick={closeMenu}>
-            <div className="logo-icon"></div>
+            <div className="logo-container">
+              <div className="logo-icon"></div>
+            </div>
             <div className="logo-text">
               <span className="brand-name">Saphyr</span>
               <span className="brand-divider"></span>
@@ -116,7 +118,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
                 boxSizing: 'border-box'
               }}
             >
-              {theme === 'dark' ? 'LIGHT' : 'DARK'}
+              {theme === 'light' ? 'DARK' : theme === 'dark' ? 'OLED' : 'LIGHT'}
             </button>
 
             <button className={`hamburger ${isOpen ? 'open' : ''}`} onClick={toggleMenu} aria-label="Menu">

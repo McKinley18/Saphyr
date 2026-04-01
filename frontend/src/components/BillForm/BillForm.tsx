@@ -55,7 +55,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
         <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Payment*</label>
-            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+            <div className="currency-input-wrapper">
               <span className="currency-prefix" style={{ color: accent }}>$</span>
               <input required type="number" step="0.01" value={formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} placeholder="0.00" />
             </div>
@@ -75,7 +75,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
               />
               <span 
                 onClick={() => (document.getElementById('bill-date-helper') as any)?.showPicker()}
-                style={{ position: 'absolute', right: '12px', cursor: 'pointer', fontSize: '1.1rem', filter: 'grayscale(1) brightness(1.5)', opacity: 0.7 }}
+                style={{ position: 'absolute', right: '12px', cursor: 'pointer', fontSize: '1.1rem', opacity: 0.6 }}
                 title="Open Calendar"
               >
                 📅

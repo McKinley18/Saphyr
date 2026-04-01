@@ -74,7 +74,11 @@ function AppContent() {
   }, [theme]);
 
   const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
+    setTheme(prev => {
+      if (prev === 'light') return 'dark';
+      if (prev === 'dark') return 'oled';
+      return 'light';
+    });
   };
 
   const loadData = async (force = false) => {

@@ -9,6 +9,15 @@ interface TransactionFormProps {
   customColor?: string;
 }
 
+const CATEGORY_HEURISTICS: Record<string, string[]> = {
+  'Groceries': ['walmart', 'target', 'kroger', 'safeway', 'publix', 'whole foods', 'trader joe', 'aldi', 'costco', 'wegmans', 'heb', 'h-e-b', 'meijer', 'food lion', 'vons'],
+  'Gas': ['shell', 'chevron', 'exxon', 'mobil', 'bp', 'sunoco', 'valero', 'marathon', 'citgo', 'phillips 66', 'texaco', 'quik trip', 'wawa', 'speedway'],
+  'Dining': ['mcdonald', 'starbucks', 'subway', 'wendy', 'burger king', 'taco bell', 'dunkin', 'pizza hut', 'domino', 'chipotle', 'kfc', 'sonic', 'panera', 'chick-fil-a'],
+  'Entertainment': ['netflix', 'spotify', 'hulu', 'disney+', 'apple tv', 'hbo max', 'amazon prime', 'peacock', 'paramount+', 'amc+', 'youtube', 'twitch', 'steam', 'playstation', 'xbox', 'nintendo'],
+  'Utilities': ['duke energy', 'con edison', 'pg&e', 'southern company', 'dominion', 'fpl', 'aep', 'pseg', 'national grid', 'xcel', 'eversource', 'pge', 'edison', 'water', 'electric', 'gas'],
+  'Transportation': ['uber', 'lyft', 'uber eats', 'doordash', 'postmates', 'grubhub', 'instacart', 'seamless', 'lime', 'bird', 'spin', 'jump']
+};
+
 const TransactionForm: React.FC<TransactionFormProps> = ({ 
   accounts, budgets, userId, onTransactionAdded, customColor 
 }) => {
@@ -21,6 +30,33 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     account_id: '',
     budget_category_id: ''
   });
+
+  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const lowerValue = value.toLowerCase();
+    
+    let suggestedBudgetId = formData.budget_category_id;
+    
+    // Run heuristic engine if a budget hasn't been manually forced yet
+    if (!suggestedBudgetId || suggestedBudgetId === '') {
+      for (const [budgetType, keywords] of Object.entries(CATEGORY_HEURISTICS)) {
+        if (keywords.some(k => lowerValue.includes(k))) {
+          // Find matching budget box by name
+          const match = budgets.find(b => b.name.toLowerCase().includes(budgetType.toLowerCase()));
+          if (match) {
+            suggestedBudgetId = match.id;
+            break;
+          }
+        }
+      }
+    }
+
+    setFormData({
+      ...formData, 
+      category: value,
+      budget_category_id: suggestedBudgetId
+    });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,7 +91,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
         <div className="grid" style={{ gridTemplateColumns: '1fr 1.5fr', gap: '15px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Amount</label>
-            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+            <div className="currency-input-wrapper">
               <span className="currency-prefix" style={{ color: accent }}>$</span>
               <input 
                 required 
@@ -69,12 +105,12 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             </div>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Category</label>
+            <label>Category / Merchant</label>
             <input 
               required 
               value={formData.category} 
-              onChange={e => setFormData({...formData, category: e.target.value})} 
-              placeholder="e.g. Coffee, Rent"
+              onChange={handleCategoryChange} 
+              placeholder="e.g. Walmart, Rent"
             />
           </div>
         </div>
