@@ -91,7 +91,7 @@ function AppContent() {
     }
     
     try {
-      const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = await Promise.all([
+      const responses = await Promise.all([
         fetchAccounts(),
         fetchTransactions(),
         fetchSalaryProfile(),
@@ -101,6 +101,15 @@ function AppContent() {
         fetchSnapshots(),
         fetchGoals()
       ]);
+
+      // Check for unauthorized errors in any response
+      const unauthorized = responses.some(res => res && res.error === 'Authentication required');
+      if (unauthorized) {
+        logout();
+        return;
+      }
+      
+      const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = responses;
       
       setAccounts(accs || []);
       setTransactions(txs || []);
