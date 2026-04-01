@@ -39,7 +39,7 @@ function AppContent() {
   const [goals, setGoals] = useState<any[]>([]);
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
-  const [, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
   const [isSplashActive, setIsSplashActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
@@ -159,8 +159,7 @@ function AppContent() {
       <div style={{ 
         opacity: isSplashActive ? 0 : 1,
         transition: 'opacity 1s ease',
-        minHeight: '100vh',
-        visibility: isSplashActive ? 'hidden' : 'visible'
+        minHeight: '100vh'
       }}>
         <Navbar theme={theme} toggleTheme={toggleTheme} />
         <div className="container">
