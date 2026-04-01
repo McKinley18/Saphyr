@@ -44,12 +44,14 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [lastFetched, setLastFetched] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
 
   const { user, loading: authLoading, logout } = useAuth();
+  
   // Show splash on initial load
   useEffect(() => {
     if (authLoading) setIsSplashActive(true);
-  }, []);
+  }, [authLoading]);
 
   // Safety Timeout: Ensure splash always disappears
   useEffect(() => {
@@ -102,8 +104,9 @@ function AppContent() {
       ]);
 
       // Check for unauthorized errors in any response
-      const unauthorized = responses.some(res => res && res.error === 'Authentication required');
+      const unauthorized = responses.some(res => res && (res.error === 'Authentication required' || res.status === 401));
       if (unauthorized) {
+        console.error("🚫 Saphyr: Session Invalid. Redirecting...");
         logout();
         return;
       }
@@ -119,6 +122,7 @@ function AppContent() {
       setSnapshots(snps || []);
       setGoals(gls || []);
       setLastFetched(now);
+      setRetryCount(0); // Reset on success
       setError(null);
 
       // Daily Snapshot Capture
@@ -138,11 +142,18 @@ function AppContent() {
       }
     } catch (e: any) {
       console.error("Data Load Error:", e);
+      setRetryCount(prev => {
+        if (prev >= 2) {
+          console.error("🚨 Saphyr: Too many failures. Resetting session...");
+          logout();
+          return 0;
+        }
+        return prev + 1;
+      });
       setError("Sync failed. Using cached data.");
-      setIsSplashActive(false); // Force splash off on error
+      setIsSplashActive(false); 
     } finally {
       setLoading(false);
-      // Ensure splash dies after a reasonable delay
       setTimeout(() => setIsSplashActive(false), 800);
     }
   };
