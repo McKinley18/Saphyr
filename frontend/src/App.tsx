@@ -39,11 +39,10 @@ function AppContent() {
   const [goals, setGoals] = useState<any[]>([]);
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [isSplashActive, setIsSplashActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [isBlurred, setIsBlurred] = useState(false);
   const [lastFetched, setLastFetched] = useState(0);
   
   const { user, loading: authLoading } = useAuth();
@@ -133,10 +132,10 @@ function AppContent() {
     }
   }, [user, authLoading]);
 
-  const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
+  const handleSalarySubmit = async (e: any, _filingStatus?: string, extraData?: any) => {
     e.preventDefault();
     try {
-      const response = await updateSalaryProfile(extraData);
+      await updateSalaryProfile(extraData);
       await loadData(true);
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
@@ -157,6 +156,12 @@ function AppContent() {
       }}>
         <Navbar theme={theme} toggleTheme={toggleTheme} />
         <div className="container">
+          {error && (
+            <div style={{ background: 'rgba(239, 68, 68, 0.1)', color: 'var(--danger)', padding: '15px', borderRadius: '12px', marginBottom: '20px', border: '1px solid var(--danger)', textAlign: 'center', fontSize: '0.9rem', fontWeight: 700 }}>
+              {error}
+              <button onClick={() => setError(null)} style={{ marginLeft: '15px', background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', padding: 0, width: 'auto', boxShadow: 'none' }}>DISMISS</button>
+            </div>
+          )}
           <Routes>
             <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
             <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupPage />} />

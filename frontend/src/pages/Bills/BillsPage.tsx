@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { deleteAccount, updateAccount } from '../../services/api';
 import BillForm from '../../components/BillForm/BillForm';
@@ -39,6 +39,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
 
   const bills = (accounts || []).filter(acc => acc.is_bill);
   const totalMonthlyBills = bills.reduce((sum, b) => sum + Math.abs(parseFloat(b.balance || '0')), 0);
+  const billGroups = Array.from(new Set(bills.map(b => b.group_name).filter(Boolean))) as string[];
 
   const handleDeleteBill = async (id: string, name: string) => {
     const isConfirmed = await confirm({ title: 'Delete Obligation', message: `Are you sure you want to remove the "${name}" obligation?`, confirmLabel: 'DELETE OBLIGATION', isDanger: true });
@@ -93,7 +94,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
           <div className="workflow-column">
             <section className="card glow-danger" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--danger)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
               {renderColorPicker('log')}
-              <BillForm onBillAdded={loadData} customColor={boxColors['log'] || 'var(--danger)'} />
+              <BillForm onBillAdded={loadData} userId={userId} groups={billGroups} customColor={boxColors['log'] || 'var(--danger)'} />
             </section>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -139,7 +140,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
       ) : (
         <div style={{ maxWidth: '800px', margin: '0 auto' }}>
           <section className="card glow-primary" style={{ padding: '35px' }}>
-            <BillSimulator />
+            <BillSimulator bills={bills} />
           </section>
         </div>
       )}

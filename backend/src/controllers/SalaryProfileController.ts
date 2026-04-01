@@ -10,7 +10,7 @@ export class SalaryProfileController {
       const profile = await db('salary_profiles').where({ user_id: userId }).orderBy('updated_at', 'desc').first();
       const taxProfile = await db('tax_profiles').where({ user_id: userId }).first();
       
-      let deductions = [];
+      let deductions: any[] = [];
       try {
         deductions = await db('custom_deductions').where({ user_id: userId });
       } catch (e) {

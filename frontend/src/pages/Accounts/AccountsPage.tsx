@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import AccountForm from '../../components/AccountForm/AccountForm';
 import { useAuth } from '../../context/AuthContext';
@@ -33,6 +33,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
 
   const cashAccounts = (accounts || []).filter(a => !a.is_bill);
   const totalCash = cashAccounts.reduce((sum, a) => sum + parseFloat(a.balance || '0'), 0);
+  const accountGroups = Array.from(new Set(accounts.map(a => a.group_name).filter(Boolean))) as string[];
 
   const safeFormat = (val: any) => {
     if (isPrivacyMode) return '••••';
@@ -96,7 +97,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         <div className="workflow-column">
           <section className="card glow-primary" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
             {renderColorPicker('log')}
-            <AccountForm onAccountAdded={loadData} customColor={boxColors['log'] || 'var(--primary)'} />
+            <AccountForm onAccountAdded={loadData} userId={userId} groups={accountGroups} customColor={boxColors['log'] || 'var(--primary)'} />
           </section>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>

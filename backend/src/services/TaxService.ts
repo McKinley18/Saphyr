@@ -38,7 +38,7 @@ export class TaxService {
       const totalFica = ficaSocialSecurity + ficaMedicare;
 
       const state = salaryProfile?.state || 'WA';
-      let customDeductions = [];
+      let customDeductions: any[] = [];
       try { customDeductions = await db('custom_deductions').where({ user_id: userId }); } catch (e) {}
 
       const totalPreTaxDeductions = customDeductions
