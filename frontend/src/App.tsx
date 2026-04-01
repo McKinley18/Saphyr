@@ -79,7 +79,11 @@ function AppContent() {
     }
 
     const now = Date.now();
-    if (!force && now - lastFetched < 5000) return;
+    if (!force && now - lastFetched < 5000) {
+      setLoading(false);
+      setIsSplashActive(false);
+      return;
+    }
     
     try {
       const [accs, txs, sal, tax, bdgs, incSrcs, snps, gls] = await Promise.all([
