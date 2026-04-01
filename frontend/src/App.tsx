@@ -125,11 +125,12 @@ function AppContent() {
       }
     } catch (e: any) {
       console.error("Data Load Error:", e);
-      setError(e.message);
+      setError("Sync failed. Using cached data.");
+      setIsSplashActive(false); // Force splash off on error
     } finally {
       setLoading(false);
-      // Keep splash active for at least 2 seconds for visual impact
-      setTimeout(() => setIsSplashActive(false), 2000);
+      // Ensure splash dies after a reasonable delay
+      setTimeout(() => setIsSplashActive(false), 800);
     }
   };
 
