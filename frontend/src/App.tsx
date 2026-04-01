@@ -47,6 +47,14 @@ function AppContent() {
   
   const { user, loading: authLoading } = useAuth();
 
+  // Safety Timeout: Ensure splash always disappears
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setIsSplashActive(false);
+    }, 5000); // 5 second hard limit
+    return () => clearTimeout(timer);
+  }, []);
+
   // Apply Accent Color
   useEffect(() => {
     if (user?.accent_color) {
