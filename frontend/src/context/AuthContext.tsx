@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { logout as apiLogout } from '../services/api';
 
 interface AuthContextType {
@@ -18,10 +19,10 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [isPrivacyMode, setIsPrivacyMode] = useState(
     localStorage.getItem('saphyr_privacy_mode') === 'true'
   );
-  const [isEditMode, setIsEditMode] = useState(false);
 
   // Validate session on mount
   useEffect(() => {
@@ -53,7 +54,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     localStorage.removeItem('saphyr_user');
-    window.location.href = '/login';
+    navigate('/login');
   };
 
   const updateUserPreferences = async (prefs: any) => {
