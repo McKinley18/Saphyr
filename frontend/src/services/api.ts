@@ -1,4 +1,5 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+const API_URL = import.meta.env.VITE_API_URL || 
+  (import.meta.env.PROD ? 'https://saphyr-api.onrender.com/api' : 'http://localhost:3001/api');
 
 console.log('📡 Saphyr API Layer initialized at:', API_URL);
 
