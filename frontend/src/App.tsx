@@ -39,7 +39,7 @@ function AppContent() {
   const [goals, setGoals] = useState<any[]>([]);
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [_loading, setLoading] = useState(true);
   const [isSplashActive, setIsSplashActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
