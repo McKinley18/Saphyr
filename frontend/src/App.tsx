@@ -42,6 +42,8 @@ function AppContent() {
   const [_loading, setLoading] = useState(true);
   const [isSplashActive, setIsSplashActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
+  const [lastFetched, setLastFetched] = useState(0);
 
   const { user, loading: authLoading } = useAuth();
 
