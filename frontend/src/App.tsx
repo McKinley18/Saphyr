@@ -40,12 +40,15 @@ function AppContent() {
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
   const [_loading, setLoading] = useState(true);
-  const [isSplashActive, setIsSplashActive] = useState(true);
+  const [isSplashActive, setIsSplashActive] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
-  const [lastFetched, setLastFetched] = useState(0);
-  
+
   const { user, loading: authLoading } = useAuth();
+
+  // Show splash on initial load
+  useEffect(() => {
+    if (authLoading) setIsSplashActive(true);
+  }, []);
 
   // Safety Timeout: Ensure splash always disappears
   useEffect(() => {
