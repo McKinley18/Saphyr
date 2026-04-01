@@ -56,7 +56,7 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills, customColor, rende
   const accent = customColor || 'var(--primary)';
 
   return (
-    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'rgba(255,255,255,0.01)', padding: '35px', position: 'relative' }}>
+    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative' }}>
       {renderColorPicker && renderColorPicker()}
       <h3 style={{ color: 'var(--text)', margin: '0 0 10px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center' }}>LOAN SIMULATOR</h3>
       <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '25px', textAlign: 'center' }}>

@@ -42,7 +42,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
   const accent = customColor || 'var(--primary)';
 
   return (
-    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'rgba(255,255,255,0.01)', padding: '35px', position: 'relative' }}>
+    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative' }}>
       {renderColorPicker && renderColorPicker()}
       <h3 style={{ margin: '0 0 25px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', color: 'var(--text)' }}>LOG OBLIGATION</h3>
       

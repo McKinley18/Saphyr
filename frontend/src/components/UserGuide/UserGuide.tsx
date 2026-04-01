@@ -66,7 +66,7 @@ const UserGuide: React.FC<UserGuideProps> = ({ guideKey, title, children }) => {
   }
 
   return (
-    <div className="card" style={{ marginBottom: '25px', background: 'rgba(59, 130, 246, 0.05)', borderColor: 'rgba(59, 130, 246, 0.2)', textAlign: 'left', position: 'relative' }}>
+    <div className="card" style={{ marginBottom: '25px', background: 'var(--subtle-overlay)', borderColor: 'var(--primary)', textAlign: 'left', position: 'relative', borderLeftWidth: '5px' }}>
       <button 
         onClick={hideGuide} 
         style={{ 

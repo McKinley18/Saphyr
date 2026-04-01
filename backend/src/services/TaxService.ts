@@ -2,7 +2,8 @@ import db from '../database/db.js';
 
 export class TaxService {
   static getAnnualMultiplier(frequency: string) {
-    switch (frequency) {
+    const f = (frequency || 'monthly').toLowerCase();
+    switch (f) {
       case 'bi-weekly': return 26;
       case 'weekly': return 52;
       default: return 12; // monthly

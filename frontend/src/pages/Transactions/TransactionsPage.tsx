@@ -122,7 +122,6 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
         <p>Your "Daily Power" is your most critical metric. It tells you exactly what you can spend right now while staying on track for your monthly goals.</p>
       </UserGuide>
 
-      {/* DAILY POWER COMMAND BAR */}
       <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box' }}>
         <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
           <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Available</label>
@@ -139,10 +138,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
       </div>
 
       <div className="accounts-grid-layout">
-        
-        {/* LEFT COLUMN: WORKSPACE */}
         <div className="workflow-column">
-          <section className="card" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, padding: '35px', position: 'relative', marginBottom: '30px' }}>
+          <section className="card" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
             {renderColorPicker('log')}
             <TransactionForm accounts={accounts} budgets={budgets} userId={userId} onTransactionAdded={loadData} customColor={boxColors['log'] || 'var(--primary)'} />
           </section>
@@ -153,7 +150,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </div>
 
           {showAddBudget && (
-            <form onSubmit={handleCreateBudget} className="add-goal-form" style={{ marginBottom: '30px' }}>
+            <form onSubmit={handleCreateBudget} className="add-goal-form" style={{ marginBottom: '30px', background: 'var(--subtle-overlay)' }}>
               <div className="form-group"><label>Box Name</label><input required placeholder="e.g. Groceries" value={newBudget.name} onChange={e => setNewBudget({...newBudget, name: e.target.value})} /></div>
               <div className="form-group"><label>Monthly Limit $</label><input required type="number" placeholder="0.00" value={newBudget.limit} onChange={e => setNewBudget({...newBudget, limit: e.target.value})} /></div>
               <button type="submit" className="primary-btn">CREATE BOX</button>
@@ -179,7 +176,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
                     <button onClick={() => handleDeleteBudget(budget.id, budget.name)} className="remove-btn-minimal" style={{ fontSize: '1.1rem' }}>&times;</button>
                   </div>
                   <div style={{ fontSize: '1.8rem', fontWeight: 900, margin: '15px 0', color: remaining >= 0 ? 'var(--text)' : 'var(--danger)' }}>${safeFormat(remaining)}</div>
-                  <div className="progress-container">
+                  <div className="progress-container" style={{ background: 'var(--subtle-overlay)' }}>
                     <div className="progress-bar" style={{ width: `${progress}%`, background: progress > 90 ? 'var(--danger)' : bColor }}></div>
                   </div>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '10px', fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)' }}>
@@ -192,15 +189,12 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
           </div>
         </div>
 
-        {/* RIGHT COLUMN: TICKER */}
         <div className="summary-column">
           <div className="sticky-ticker-column">
             <h3 style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '20px', textAlign: 'center', letterSpacing: '0.1em' }}>RECENT LOGS</h3>
-            
             <div className="form-group">
-              <input type="text" placeholder="SEARCH LOGS..." value={searchQuery} onChange={e => {setSearchQuery(e.target.value); setVisibleCount(20);}} style={{ background: 'var(--bg)', fontSize: '0.75rem', border: '2px solid var(--border)' }} />
+              <input type="text" placeholder="SEARCH LOGS..." value={searchQuery} onChange={e => {setSearchQuery(e.target.value); setVisibleCount(20);}} style={{ background: 'var(--input-bg)', fontSize: '0.75rem', border: '2px solid var(--border)' }} />
             </div>
-
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               {displayTransactions.map(tx => {
                 const acc = accounts.find(a => a.id === tx.account_id);
@@ -229,29 +223,21 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
             </div>
           </div>
         </div>
-
       </div>
 
       <style>{`
         .transactions-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
         .accounts-grid-layout { display: grid; grid-template-columns: 1fr; gap: 40px; width: 100%; box-sizing: border-box; padding-bottom: 100px; }
         @media (min-width: 1024px) { .accounts-grid-layout { grid-template-columns: minmax(0, 1.8fr) minmax(380px, 1.2fr); align-items: start; } }
-        
         .workflow-column { display: flex; flex-direction: column; width: 100%; box-sizing: border-box; }
         .sticky-ticker-column { position: sticky; top: 100px; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: none; }
-        .sticky-ticker-column::-webkit-scrollbar { display: none; }
-
         .ticker-item { border: 2px solid var(--border) !important; background: var(--bg); transition: all 0.2s ease; }
         .ticker-item:hover { transform: translateX(-4px); border-color: var(--primary) !important; }
-        
-        .progress-container { width: 100%; height: 8px; background: rgba(255,255,255,0.05); border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
+        .progress-container { width: 100%; height: 8px; border-radius: 4px; overflow: hidden; margin-top: 10px; border: 1px solid var(--border); }
         .progress-bar { height: 100%; transition: width 0.8s cubic-bezier(0.4, 0, 0.2, 1); }
-
-        .remove-btn-minimal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; width: auto; marginTop: 0; box-shadow: none; }
-        .remove-btn-minimal:hover { color: var(--danger); }
-        
-        .add-goal-btn { background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 8px; cursor: pointer; width: auto; marginTop: 0; font-weight: 900; }
-        .add-goal-form { background: rgba(255,255,255,0.02); padding: 25px; border-radius: 16px; border: 2px solid var(--border); }
+        .remove-btn-minimal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; width: auto; box-shadow: none; }
+        .add-goal-btn { background: var(--subtle-overlay); border: 1px solid var(--border); color: var(--text); padding: 8px 15px; border-radius: 8px; cursor: pointer; width: auto; font-weight: 900; }
+        .add-goal-form { padding: 25px; border-radius: 16px; border: 2px solid var(--border); }
         .primary-btn { background: var(--primary); width: 100%; fontWeight: 900; margin-top: 10px; }
       `}</style>
     </div>
