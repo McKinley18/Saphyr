@@ -45,8 +45,7 @@ function AppContent() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [lastFetched, setLastFetched] = useState(0);
 
-  const { user, loading: authLoading } = useAuth();
-
+  const { user, loading: authLoading, logout } = useAuth();
   // Show splash on initial load
   useEffect(() => {
     if (authLoading) setIsSplashActive(true);
