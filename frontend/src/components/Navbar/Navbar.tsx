@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import './Navbar.css';
 import { useAuth } from '../../context/AuthContext';
@@ -12,9 +12,29 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
   const { user, logout, isEditMode, toggleEditMode } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
+
+  // Close menu on outside click
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    } else {
+      document.removeEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen]);
 
   // Define all available tabs
   const allTabs = [
@@ -32,14 +52,11 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
     ? allTabs.filter(tab => visibleTabs.includes(tab.path))
     : allTabs;
 
-  // For Bottom Nav (Mobile), we show the first 4-5 visible main tabs
-  const bottomNavTabs = filteredTabs.filter(t => ['/', '/accounts', '/bills', '/transactions', '/settings'].includes(t.path)).slice(0, 5);
-
   if (!user) return null;
 
   return (
     <>
-      <nav className="navbar">
+      <nav className="navbar" ref={menuRef}>
         <div className="navbar-container">
           <Link to="/" className="navbar-logo" onClick={closeMenu}>
             <div className="logo-icon"></div>
@@ -51,31 +68,33 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
           </Link>
           
           <div className="navbar-right">
-            <button 
-              className={`edit-mode-toggle ${isEditMode ? 'active' : ''}`}
-              onClick={toggleEditMode}
-              style={{ 
-                width: '65px', 
-                height: '32px',
-                background: isEditMode ? 'var(--primary)' : 'rgba(255,255,255,0.05)',
-                color: isEditMode ? 'white' : 'var(--text)',
-                padding: 0,
-                fontSize: '0.7rem',
-                fontWeight: 800,
-                marginRight: '10px',
-                boxShadow: isEditMode ? '0 0 15px var(--primary)' : 'none',
-                marginTop: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                borderRadius: '8px',
-                border: isEditMode ? '1px solid var(--primary)' : '1px solid var(--border)',
-                letterSpacing: '0.05em',
-                boxSizing: 'border-box'
-              }}
-            >
-              {isEditMode ? 'DONE' : 'EDIT'}
-            </button>
+            {isEditMode && (
+              <button 
+                className={`edit-mode-toggle active`}
+                onClick={toggleEditMode}
+                style={{ 
+                  width: '65px', 
+                  height: '32px',
+                  background: 'var(--primary)',
+                  color: 'white',
+                  padding: 0,
+                  fontSize: '0.7rem',
+                  fontWeight: 800,
+                  marginRight: '10px',
+                  boxShadow: '0 0 15px var(--primary)',
+                  marginTop: 0,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  borderRadius: '8px',
+                  border: isEditMode ? '1px solid var(--primary)' : '1px solid var(--border)',
+                  letterSpacing: '0.05em',
+                  boxSizing: 'border-box'
+                }}
+              >
+                DONE
+              </button>
+            )}
             <button 
               className="theme-toggle" 
               onClick={toggleTheme}
@@ -147,20 +166,6 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
           </div>
         </div>
       </nav>
-
-      {/* Bottom Navigation for Mobile Efficiency */}
-      <div className="mobile-bottom-nav">
-        {bottomNavTabs.map(tab => (
-          <Link 
-            key={tab.path} 
-            to={tab.path} 
-            className={`bottom-nav-item ${location.pathname === tab.path ? 'active' : ''}`}
-          >
-            <span className="bottom-nav-label" style={{ fontSize: '0.7rem' }}>{tab.label}</span>
-            <div className="active-indicator"></div>
-          </Link>
-        ))}
-      </div>
     </>
   );
 };

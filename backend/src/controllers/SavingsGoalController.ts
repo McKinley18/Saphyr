@@ -16,13 +16,15 @@ export class SavingsGoalController {
   static async createGoal(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { name, target_amount, current_amount, color } = req.body;
+      const { name, target_amount, current_amount, color, monthly_contribution, account_id } = req.body;
       const [goal] = await db('savings_goals').insert({
         user_id: userId,
         name,
         target_amount,
-        current_amount,
-        color
+        current_amount: current_amount || 0,
+        color: color || '#3b82f6',
+        monthly_contribution: monthly_contribution || 0,
+        account_id: account_id || null
       }).returning('*');
       res.status(201).json(goal);
     } catch (error: any) {

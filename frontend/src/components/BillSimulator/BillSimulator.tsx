@@ -2,9 +2,11 @@ import React, { useState } from 'react';
 
 interface BillSimulatorProps {
   bills: any[];
+  customColor?: string;
+  renderColorPicker?: () => React.ReactNode;
 }
 
-const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
+const BillSimulator: React.FC<BillSimulatorProps> = ({ bills, customColor, renderColorPicker }) => {
   const [selectedBillId, setSelectedBillId] = useState<string>('');
   const [extraPayment, setExtraPayment] = useState<string>('');
 
@@ -16,21 +18,17 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
   const selectedBill = bills.find(b => b.id === selectedBillId);
   const paymentValue = parseFloat(extraPayment) || 0;
 
-  // Monthly Payment Calculation (Standard Amortization)
-  // P = (Pv * r) / (1 - (1 + r)^-n)
   const calculateMonthlyPayment = (principal: number, annualApr: number, months: number) => {
     if (annualApr === 0) return principal / months;
     const r = annualApr / 12;
     return (principal * r) / (1 - Math.pow(1 + r, -months));
   };
 
-  // Calculate Remaining Term after extra payment
-  // n = -log(1 - (Pv * r) / P) / log(1 + r)
   const calculateRemainingTerm = (principal: number, annualApr: number, monthlyPayment: number) => {
     if (annualApr === 0) return principal / monthlyPayment;
     const r = annualApr / 12;
     const val = 1 - (principal * r) / monthlyPayment;
-    if (val <= 0) return 0; // Already paid off or payment too low
+    if (val <= 0) return 0;
     return -Math.log(val) / Math.log(1 + r);
   };
 
@@ -39,14 +37,9 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
     const principal = Math.abs(parseFloat(selectedBill.balance));
     const apr = parseFloat(selectedBill.apr);
     const originalTerm = parseInt(selectedBill.loan_term);
-    
     const standardPayment = calculateMonthlyPayment(principal, apr, originalTerm);
     const newPrincipal = Math.max(0, principal - paymentValue);
-    
-    // If they make an extra payment now, and keep paying the SAME monthly amount
     const newTerm = calculateRemainingTerm(newPrincipal, apr, standardPayment);
-    
-    // Total Interest Cost = (Payment * Months) - Principal
     const originalTotalInterest = (standardPayment * originalTerm) - principal;
     const newTotalInterest = (standardPayment * newTerm) - newPrincipal;
     const totalInterestSaved = originalTotalInterest - newTotalInterest;
@@ -60,11 +53,14 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
     };
   }
 
+  const accent = customColor || 'var(--primary)';
+
   return (
-    <div className="card" style={{ borderLeft: '5px solid var(--warning)', background: 'rgba(245, 158, 11, 0.02)' }}>
-      <h3 style={{ color: 'var(--warning)', margin: '0 0 10px 0', fontSize: '1.1rem', fontWeight: 800 }}>PRO LOAN SIMULATOR</h3>
-      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '20px' }}>
-        Select a loan to see how extra principal payments shorten your term and save interest.
+    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'rgba(255,255,255,0.01)', padding: '35px', position: 'relative' }}>
+      {renderColorPicker && renderColorPicker()}
+      <h3 style={{ color: 'var(--text)', margin: '0 0 10px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center' }}>LOAN SIMULATOR</h3>
+      <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '25px', textAlign: 'center' }}>
+        Analyze the impact of extra principal payments on your term and interest costs.
       </p>
 
       <div className="form-group">
@@ -80,8 +76,8 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
       {selectedBill && (
         <>
           {!selectedBill.apr || !selectedBill.loan_term ? (
-            <div style={{ padding: '15px', background: 'rgba(255,255,255,0.05)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--warning)', textAlign: 'center' }}>
-              • Update this bill with an **APR** and **Loan Term** to enable advanced simulations.
+            <div style={{ padding: '20px', background: 'rgba(255,255,255,0.03)', borderRadius: '12px', fontSize: '0.75rem', color: 'var(--warning)', textAlign: 'center', border: '1px dashed var(--warning)' }}>
+              • Update this obligation with an **APR** and **Loan Term** to enable simulations.
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px', marginTop: '10px' }}>
@@ -92,36 +88,36 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
                   placeholder="0.00" 
                   value={extraPayment} 
                   onChange={e => setExtraPayment(e.target.value)}
-                  style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--warning)', border: '2px solid var(--warning)' }}
+                  style={{ fontSize: '1.25rem', fontWeight: 900, color: accent, border: `2px solid ${accent}` }}
                 />
               </div>
 
               {stats && (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Estimated Monthly Payment:</span>
-                    <span style={{ fontWeight: 800 }}>${safeFormat(stats.standardPayment)}</span>
+                    <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>Estimated Monthly Payment:</span>
+                    <span style={{ fontWeight: 900, fontFamily: 'JetBrains Mono, monospace' }}>${safeFormat(stats.standardPayment)}</span>
                   </div>
 
-                  <div style={{ padding: '20px', background: 'var(--bg)', borderRadius: '16px', border: '1px solid var(--warning)', display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                  <div style={{ padding: '25px', background: 'var(--bg)', borderRadius: '20px', border: `2px solid ${accent}`, display: 'flex', flexDirection: 'column', gap: '15px' }}>
                     <div style={{ textAlign: 'center' }}>
-                      <div style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--warning)', letterSpacing: '0.1em' }}>IMPACT SUMMARY</div>
+                      <div style={{ fontSize: '0.7rem', fontWeight: 900, color: accent, letterSpacing: '0.1em' }}>SIMULATION IMPACT</div>
                     </div>
                     
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700 }}>Time Saved:</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--success)' }}>{stats.monthsSaved} Months Sooner</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>Months Saved:</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--success)' }}>{stats.monthsSaved} Months</div>
                     </div>
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ fontSize: '0.75rem', fontWeight: 700 }}>Interest Saved:</div>
-                      <div style={{ fontSize: '1.1rem', fontWeight: 900, color: 'var(--success)' }}>+${safeFormat(stats.totalInterestSaved)}</div>
+                      <div style={{ fontSize: '0.8rem', fontWeight: 800 }}>Interest Saved:</div>
+                      <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--success)', fontFamily: 'JetBrains Mono, monospace' }}>+${safeFormat(stats.totalInterestSaved)}</div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '10px', marginTop: '5px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>New Remaining Term:</span>
-                        <span style={{ fontWeight: 800 }}>{stats.newTerm} Months</span>
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '15px', marginTop: '5px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8rem' }}>
+                        <span style={{ color: 'var(--text-muted)', fontWeight: 700 }}>New Remaining Term:</span>
+                        <span style={{ fontWeight: 900 }}>{stats.newTerm} Months</span>
                       </div>
                     </div>
                   </div>
@@ -131,6 +127,10 @@ const BillSimulator: React.FC<BillSimulatorProps> = ({ bills }) => {
           )}
         </>
       )}
+      
+      <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textAlign: 'center', fontStyle: 'italic', marginTop: '20px' }}>
+        *Disclaimer: Results are estimates based on user-provided APR and balances. Actual payoff may vary based on lender calculation methods.
+      </div>
     </div>
   );
 };

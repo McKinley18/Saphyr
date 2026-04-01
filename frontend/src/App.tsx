@@ -28,6 +28,7 @@ import ForgotPasswordPage from './pages/Auth/ForgotPasswordPage';
 import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ModalProvider } from './context/ModalContext';
 
 function AppContent() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -103,8 +104,6 @@ function AppContent() {
         fetchGoals()
       ]);
       
-      console.log("Loaded Core Data:", { accounts: accs?.length, salary: sal, tax: !!tax });
-      
       setAccounts(accs || []);
       setTransactions(txs || []);
       setSalary(sal || { annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
@@ -151,7 +150,6 @@ function AppContent() {
 
   const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
     e.preventDefault();
-    console.log("🚀 SUBMITTING INCOME UPDATE:", { filingStatus, extraData });
     try {
       const response = await updateSalaryProfile({
         annual_salary: extraData?.annual_salary,
@@ -161,13 +159,11 @@ function AppContent() {
         hourly_rate: extraData?.hourly_rate,
         hours_per_week: extraData?.hours_per_week,
         use_manual_tax: extraData?.use_manual_tax,
-        manual_tax_amount: extraData?.manual_tax_amount
+        manual_tax_amount: extraData?.manual_tax_amount,
+        state: extraData?.state
       });
       
-      console.log("✅ SERVER RESPONSE:", response);
-      
       if (response.taxEstimate) {
-        console.log("📊 NEW TAX ESTIMATE RECEIVED:", response.taxEstimate);
         setTaxEstimate(response.taxEstimate);
         setSalary({
           annual_salary: response.taxEstimate.annual_salary,
@@ -176,9 +172,8 @@ function AppContent() {
         });
       }
       
-      await loadData(true); 
+      await loadData(true); // Force reload after save
     } catch (err: any) {
-      console.error("❌ UPDATE FAILED:", err);
       setError("Failed to update salary: " + err.message);
     }
   };
@@ -225,6 +220,7 @@ function AppContent() {
                 accounts={accounts}
                 transactions={transactions}
                 incomeSources={incomeSources}
+                snapshots={snapshots}
               />
             </ProtectedRoute>
           } />
@@ -303,7 +299,9 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppContent />
+        <ModalProvider>
+          <AppContent />
+        </ModalProvider>
       </AuthProvider>
     </Router>
   );

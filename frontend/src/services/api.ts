@@ -70,6 +70,14 @@ export const deleteAccountApi = async () => {
   return response.json();
 };
 
+export const resetAccountApi = async () => {
+  const response = await fetch(`${API_URL}/auth/reset-account`, {
+    method: 'POST',
+    headers: getHeaders(),
+  });
+  return response.json();
+};
+
 export const fetchAccounts = async () => {
   const response = await fetch(`${API_URL}/accounts`, { headers: getHeaders() });
   return response.json();

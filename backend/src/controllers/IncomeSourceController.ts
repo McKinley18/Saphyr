@@ -16,12 +16,14 @@ export class IncomeSourceController {
   static async createSource(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { name, amount, account_id } = req.body;
+      const { name, amount, account_id, frequency, is_taxed } = req.body;
       const [source] = await db('income_sources').insert({
         user_id: userId,
         name,
         amount,
-        account_id
+        account_id,
+        frequency: frequency || 'monthly',
+        is_taxed: !!is_taxed
       }).returning('*');
       res.status(201).json(source);
     } catch (error: any) {

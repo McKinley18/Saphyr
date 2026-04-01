@@ -102,7 +102,7 @@
   font-weight: 900;
   text-shadow: 0 0 10px rgba(0,0,0,0.2);
   overflow: hidden;
-  animation: logoPulse 4s infinite;
+  animation: logoPulse 8s infinite;
   border: 1px solid rgba(255,255,255,0.2);
 }
 
@@ -127,19 +127,19 @@
     transparent 100%
   );
   transform: rotate(-45deg);
-  animation: logoGlint 4s infinite;
+  animation: logoGlint 8s infinite;
   pointer-events: none;
 }
 
 @keyframes logoPulse {
-  0% { box-shadow: 0 0 15px var(--primary); }
-  50% { box-shadow: 0 0 30px var(--primary); }
-  100% { box-shadow: 0 0 15px var(--primary); }
+  0% { box-shadow: 0 0 20px var(--primary), 0 0 40px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 40px var(--primary), 0 0 80px rgba(59, 130, 246, 0.4); }
+  100% { box-shadow: 0 0 20px var(--primary), 0 0 40px rgba(59, 130, 246, 0.2); }
 }
 
 @keyframes logoGlint {
   0% { left: -150%; }
-  20% { left: 150%; }
+  25% { left: 150%; }
   100% { left: 150%; }
 }
 

@@ -7,178 +7,127 @@ interface AccountFormProps {
   groups: string[];
   initialData?: any;
   onCancel?: () => void;
+  customColor?: string;
+  renderColorPicker?: () => React.ReactNode;
 }
 
-const AccountForm: React.FC<AccountFormProps> = ({ onAccountAdded, userId, groups: existingGroups, initialData, onCancel }) => {
-  const [isAddingNewGroup, setIsAddingNewGroup] = useState(false);
+const AccountForm: React.FC<AccountFormProps> = ({ 
+  onAccountAdded, userId, groups, initialData, onCancel, customColor, renderColorPicker 
+}) => {
   const [formData, setFormData] = useState({
     name: '',
     type: 'Checking',
     balance: '',
-    monthly_deposit: '',
-    group_name: 'Cash Accounts'
+    group_name: '',
+    is_bill: false,
+    monthly_deposit: ''
   });
 
   useEffect(() => {
     if (initialData) {
       setFormData({
-        name: initialData.name || '',
-        type: initialData.type || 'Checking',
-        balance: initialData.balance?.toString() || '',
-        monthly_deposit: initialData.monthly_deposit?.toString() || '',
-        group_name: initialData.group_name || 'Cash Accounts'
-      });
-    } else {
-      setFormData({
-        name: '',
-        type: 'Checking',
-        balance: '',
-        monthly_deposit: '',
-        group_name: 'Cash Accounts'
+        name: initialData.name,
+        type: initialData.type,
+        balance: initialData.balance.toString(),
+        group_name: initialData.group_name || '',
+        is_bill: !!initialData.is_bill,
+        monthly_deposit: initialData.monthly_deposit?.toString() || ''
       });
     }
   }, [initialData]);
 
-  // Load custom groups from memory
-  const [savedGroups, setSavedGroups] = useState<string[]>(() => {
-    const memory = localStorage.getItem(`saphyr_groups_${userId}`);
-    return memory ? JSON.parse(memory) : ['Cash Accounts', 'Savings Accounts', 'Investments'];
-  });
-
-  // Combine unique groups
-  const allGroups = Array.from(new Set([...existingGroups, ...savedGroups])).sort();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      const finalGroupName = formData.group_name || 'Uncategorized';
-      const payload = { 
-        user_id: userId,
-        name: formData.name,
-        type: formData.type,
-        balance: parseFloat(formData.balance) || 0,
-        monthly_deposit: parseFloat(formData.monthly_deposit) || 0,
-        is_bill: false,
-        group_name: finalGroupName
-      };
-
-      if (initialData?.id) {
-        await updateAccount(initialData.id, payload);
+      if (initialData) {
+        await updateAccount(initialData.id, formData);
       } else {
-        await createAccount(payload);
+        await createAccount({ ...formData, user_id: userId });
       }
-
-      // Save to memory
-      if (!savedGroups.includes(finalGroupName)) {
-        const updated = [...savedGroups, finalGroupName];
-        setSavedGroups(updated);
-        localStorage.setItem(`saphyr_groups_${userId}`, JSON.stringify(updated));
-      }
-
-      if (!initialData) {
-        setFormData({ ...formData, name: '', balance: '', monthly_deposit: '' });
-      }
-      setIsAddingNewGroup(false);
+      setFormData({ name: '', type: 'Checking', balance: '', group_name: '', is_bill: false, monthly_deposit: '' });
       onAccountAdded();
     } catch (err) {
-      console.error("Failed to save account:", err);
+      console.error("Account operation failed:", err);
     }
   };
 
+  const accent = customColor || 'var(--primary)';
+
   return (
-    <div className="card" style={{ borderLeft: `4px solid ${initialData ? 'var(--primary)' : '#16a34a'}` }}>
-      <h3 style={{ color: 'var(--text)', marginBottom: '20px' }}>
-        {initialData ? 'EDIT' : 'ADD'} CASH ACCOUNT
+    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'rgba(255,255,255,0.01)', padding: '35px', position: 'relative' }}>
+      {renderColorPicker && renderColorPicker()}
+      <h3 style={{ margin: '0 0 25px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', color: 'var(--text)' }}>
+        {initialData ? 'EDIT ACCOUNT' : 'ADD CASH ACCOUNT'}
       </h3>
-      <form onSubmit={handleSubmit}>
-        <div className="form-group">
+      
+      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+        <div className="form-group" style={{ marginBottom: 0 }}>
           <label>Account Name</label>
-          <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Primary Checking" />
+          <input 
+            required 
+            value={formData.name} 
+            onChange={e => setFormData({...formData, name: e.target.value})} 
+            placeholder="e.g. Primary Checking"
+          />
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div className="form-group">
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Type</label>
             <select value={formData.type} onChange={e => setFormData({...formData, type: e.target.value})}>
               <option value="Checking">Checking</option>
               <option value="Savings">Savings</option>
-              <option value="Cash">Physical Cash</option>
+              <option value="Cash Accounts">Cash</option>
               <option value="Investment">Investment</option>
-              <option value="Other">Other</option>
             </select>
           </div>
-          <div className="form-group">
-            <label>Account Group</label>
-            {!isAddingNewGroup ? (
-              <select 
-                value={formData.group_name} 
-                onChange={e => {
-                  if (e.target.value === 'ADD_NEW') {
-                    setIsAddingNewGroup(true);
-                    setFormData({...formData, group_name: ''});
-                  } else {
-                    setFormData({...formData, group_name: e.target.value});
-                  }
-                }}
-              >
-                {allGroups.map(g => <option key={g} value={g}>{g}</option>)}
-                <option value="ADD_NEW" style={{ fontWeight: 'bold', color: 'var(--primary)' }}>+ Add New Group...</option>
-              </select>
-            ) : (
-              <div style={{ position: 'relative' }}>
-                <input 
-                  autoFocus 
-                  placeholder="New Group Name" 
-                  value={formData.group_name} 
-                  onChange={e => setFormData({...formData, group_name: e.target.value})} 
-                />
-                <button 
-                  type="button" 
-                  onClick={() => {
-                    setIsAddingNewGroup(false);
-                    setFormData({...formData, group_name: allGroups[0] || 'Cash Accounts'});
-                  }}
-                  style={{ position: 'absolute', right: '5px', top: '5px', padding: '5px 10px', width: 'auto', background: 'none', border: 'none', color: 'var(--text-muted)', boxShadow: 'none' }}
-                >&times;</button>
-              </div>
-            )}
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Balance ($)</label>
+            <input 
+              required 
+              type="number" 
+              step="0.01" 
+              value={formData.balance} 
+              onChange={e => setFormData({...formData, balance: e.target.value})} 
+              placeholder="0.00"
+            />
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-          <div className="form-group">
-            <label>Current Balance ($)</label>
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Category (Group)</label>
             <input 
-              type="number" 
-              step="0.01" 
-              required 
-              value={formData.balance} 
-              onChange={e => setFormData({...formData, balance: e.target.value})} 
-              autoComplete="off"
+              list="account-groups"
+              value={formData.group_name} 
+              onChange={e => setFormData({...formData, group_name: e.target.value})} 
+              placeholder="e.g. Personal"
             />
+            <datalist id="account-groups">
+              {groups.map(g => <option key={g} value={g} />)}
+            </datalist>
           </div>
-          <div className="form-group">
-            <label>Monthly Deposit ($)</label>
+          <div className="form-group" style={{ marginBottom: 0 }}>
+            <label>Monthly Inflow ($)</label>
             <input 
               type="number" 
               step="0.01" 
               value={formData.monthly_deposit} 
               onChange={e => setFormData({...formData, monthly_deposit: e.target.value})} 
-              placeholder="0.00" 
-              autoComplete="off"
+              placeholder="0.00"
             />
           </div>
         </div>
-        
-        <div style={{ display: 'flex', gap: '10px' }}>
-          <button type="submit" style={{ background: initialData ? 'var(--primary)' : '#16a34a' }}>
+
+        <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
+          <button type="submit" style={{ flex: 2, background: accent }}>
             {initialData ? 'SAVE CHANGES' : 'CREATE ACCOUNT'}
           </button>
-          {initialData && (
+          {onCancel && (
             <button 
               type="button" 
               onClick={onCancel}
-              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', boxShadow: 'none' }}
+              style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', boxShadow: 'none' }}
             >
               CANCEL
             </button>

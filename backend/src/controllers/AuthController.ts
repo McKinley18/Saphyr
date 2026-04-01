@@ -139,6 +139,26 @@ export class AuthController {
     }
   }
 
+  static async resetAccount(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      await db.transaction(async trx => {
+        await trx('transactions').where({ user_id: userId }).del();
+        await trx('accounts').where({ user_id: userId }).del();
+        await trx('budget_categories').where({ user_id: userId }).del();
+        await trx('income_sources').where({ user_id: userId }).del();
+        await trx('salary_profiles').where({ user_id: userId }).del();
+        await trx('tax_profiles').where({ user_id: userId }).del();
+        await trx('savings_goals').where({ user_id: userId }).del();
+        await trx('daily_snapshots').where({ user_id: userId }).del();
+        await trx('custom_deductions').where({ user_id: userId }).del();
+      });
+      res.json({ message: 'Account has been reset to zero.' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   static async forgotPassword(req: Request, res: Response) {
     try {
       const { email } = req.body;

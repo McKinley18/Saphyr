@@ -1,9 +1,30 @@
-import React from 'react';
+import React, { useMemo } from 'react';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  AreaElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+} from 'chart.js';
+import { Line } from 'react-chartjs-2';
 import UserGuide from '../../components/UserGuide/UserGuide';
-import { 
-  PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip,
-  AreaChart, Area, XAxis, YAxis, CartesianGrid
-} from 'recharts';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  LineElement,
+  AreaElement,
+  Title,
+  Tooltip,
+  Legend,
+  Filler
+);
 
 interface TrendsPageProps {
   snapshots: any[];
@@ -11,150 +32,202 @@ interface TrendsPageProps {
   budgets: any[];
 }
 
-// Vibrant neon palette for dark mode - Sapphire Focused
-const COLORS = ['#3b82f6', '#06b6d4', '#8b5cf6', '#10b981', '#f43f5e', '#fbbf24', '#ec4899'];
-
 const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots, transactions, budgets }) => {
-  const currentMonth = new Date().getMonth();
-  const currentYear = new Date().getFullYear();
+  const safeFormat = (val: any) => {
+    const num = parseFloat(val || '0');
+    return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
 
-  // 1. Spending Pie Data
-  const spendingByBudget = (budgets || []).map(budget => {
-    const total = (transactions || [])
-      .filter(tx => 
-        tx.budget_category_id === budget.id && 
-        tx.type === 'expense' &&
-        tx.date && 
-        new Date(tx.date).getMonth() === currentMonth &&
-        new Date(tx.date).getFullYear() === currentYear
-      )
-      .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
+  const chartData = useMemo(() => {
+    const labels = snapshots.map(s => new Date(s.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }));
     
-    return { name: budget.name, value: total };
-  }).filter(item => item.value > 0);
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Total Liquidity',
+          data: snapshots.map(s => parseFloat(s.total_cash)),
+          borderColor: '#3b82f6',
+          backgroundColor: 'rgba(59, 130, 246, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 3,
+        },
+        {
+          label: 'Total Debt',
+          data: snapshots.map(s => parseFloat(s.total_debt)),
+          borderColor: '#ef4444',
+          backgroundColor: 'rgba(239, 68, 68, 0.1)',
+          fill: true,
+          tension: 0.4,
+          pointRadius: 0,
+          borderWidth: 3,
+        },
+        {
+          label: 'Net Worth',
+          data: snapshots.map(s => parseFloat(s.net_worth)),
+          borderColor: '#10b981',
+          borderWidth: 2,
+          borderDash: [5, 5],
+          fill: false,
+          tension: 0,
+          pointRadius: 4,
+          pointBackgroundColor: '#10b981',
+        }
+      ]
+    };
+  }, [snapshots]);
 
-  // 2. Snapshot Line Data
-  const chartData = (snapshots || []).map(s => ({
-    date: s.date ? s.date.split('T')[0] : '',
-    NetWorth: parseFloat(s.net_worth || '0'),
-    Cash: parseFloat(s.total_cash || '0'),
-    Debt: parseFloat(s.total_debt || '0')
-  }));
+  const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: true, position: 'bottom' as const, labels: { color: '#94a3b8', font: { weight: '800' as any, size: 10 } } },
+      tooltip: {
+        backgroundColor: '#000000',
+        titleFont: { size: 14, weight: '900' as any },
+        bodyFont: { size: 13, weight: '700' as any },
+        padding: 15,
+        borderColor: '#1e293b',
+        borderWidth: 1,
+        displayColors: true,
+      }
+    },
+    scales: {
+      x: { grid: { display: false }, ticks: { color: '#64748b', font: { weight: '700' as any } } },
+      y: { grid: { color: 'rgba(255,255,255,0.03)' }, ticks: { color: '#64748b', font: { weight: '700' as any } } }
+    }
+  };
+
+  // EXECUTIVE METRICS
+  const metrics = useMemo(() => {
+    if (snapshots.length < 2) return { delta: 0, savingRate: 0, discretionaryBurn: 0 };
+    
+    const latest = snapshots[snapshots.length - 1];
+    const previous = snapshots[0];
+    const delta = parseFloat(latest.net_worth) - parseFloat(previous.net_worth);
+    
+    // Simple saving rate estimate
+    const totalSpent = transactions
+      .filter(tx => tx.type === 'expense')
+      .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+    const totalIncome = transactions
+      .filter(tx => tx.type === 'income')
+      .reduce((sum, tx) => sum + parseFloat(tx.amount), 0);
+    
+    const savingRate = totalIncome > 0 ? ((totalIncome - totalSpent) / totalIncome) * 100 : 0;
+
+    return { delta, savingRate, totalSpent };
+  }, [snapshots, transactions]);
 
   return (
-    <div className="trends-page" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <UserGuide guideKey="trends" title="Trends & Analytics">
-        <p>Visualize your financial progress and habits over time.</p>
-        <ul style={{ paddingLeft: '20px', marginTop: '10px' }}>
-          <li><strong>Spending Breakdown:</strong> A pie chart showing which "Budget Boxes" are using the most of your money this month.</li>
-          <li><strong>Net Worth Growth:</strong> A 30-day historical chart. A snapshot is captured every time you open the app to track your wealth building progress.</li>
-          <li><strong>Insights:</strong> Use these charts to identify "leaks" in your budget and see the visual momentum of your savings.</li>
-        </ul>
+    <div className="trends-page">
+      <UserGuide guideKey="trends_v2" title="Wealth Momentum">
+        <p>Monitor your financial trajectory. The "Wealth Momentum" chart visualizes your liquid assets expanding against your debt liabilities.</p>
       </UserGuide>
 
-      <h2 style={{ margin: 0 }}>Trends & Analytics</h2>
-
-      <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '20px' }}>
-        {/* Row 1: Net Worth Growth (Full Width) */}
-        <div className="card">
-          <h3 style={{ color: 'var(--text)', marginBottom: '25px' }}>Net Worth Growth (30 Days)</h3>
-          <div style={{ width: '100%', height: 350 }}>
-            {chartData.length === 0 ? (
-              <div style={{ textAlign: 'center', paddingTop: '120px', color: 'var(--text-muted)' }}>
-                Collecting snapshot data... check back tomorrow.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorNet" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="var(--primary)" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(255,255,255,0.05)" />
-                  <XAxis 
-                    dataKey="date" 
-                    fontSize={11} 
-                    tickMargin={15} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: 'var(--text-muted)' }} 
-                  />
-                  <YAxis 
-                    fontSize={11} 
-                    tickFormatter={(val) => `$${val/1000}k`} 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: 'var(--text-muted)' }} 
-                  />
-                  <Tooltip 
-                    contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'var(--shadow)' }}
-                    itemStyle={{ color: 'var(--primary)', fontWeight: 700 }}
-                    labelStyle={{ color: 'var(--text-muted)', marginBottom: '5px' }}
-                    formatter={(value: any) => [`$${parseFloat(value).toLocaleString()}`, 'Net Worth']} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="NetWorth" 
-                    stroke="var(--primary)" 
-                    strokeWidth={3} 
-                    fillOpacity={1} 
-                    fill="url(#colorNet)" 
-                    animationDuration={1500}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            )}
+      {/* EXECUTIVE PULSE BAR */}
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box' }}>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Net Worth Delta</label>
+          <div className={`gauge-val ${metrics.delta >= 0 ? 'positive' : 'negative'}`} style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 900, marginTop: '4px' }}>
+            {metrics.delta >= 0 ? '+' : ''}${safeFormat(metrics.delta)}
           </div>
         </div>
-
-        {/* Row 2: Spending Breakdown */}
-        <div className="card">
-          <h3 style={{ color: 'var(--text)', marginBottom: '25px' }}>Spending by Budget Box (This Month)</h3>
-          <div style={{ width: '100%', height: 350 }}>
-            {spendingByBudget.length === 0 ? (
-              <div style={{ textAlign: 'center', paddingTop: '120px', color: 'var(--text-muted)' }}>
-                No spending data for this month.
-              </div>
-            ) : (
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={spendingByBudget}
-                    innerRadius={80}
-                    outerRadius={110}
-                    paddingAngle={8}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {spendingByBudget.map((_, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip 
-                    contentStyle={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: '12px', boxShadow: 'var(--shadow)' }}
-                    itemStyle={{ fontWeight: 700 }}
-                    formatter={(value: any) => [`$${parseFloat(value).toLocaleString()}`, 'Spent']} 
-                  />
-                  <Legend 
-                    verticalAlign="bottom" 
-                    height={36} 
-                    iconType="circle" 
-                    formatter={(value) => <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>{value}</span>}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            )}
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Saving Rate</label>
+          <div className="gauge-val" style={{ color: 'var(--success)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 900, marginTop: '4px' }}>
+            {metrics.savingRate.toFixed(1)}%
+          </div>
+        </div>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Burn</label>
+          <div className="gauge-val" style={{ color: 'var(--danger)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 900, marginTop: '4px' }}>
+            -${safeFormat(metrics.totalSpent)}
           </div>
         </div>
       </div>
+
+      <div className="accounts-grid-layout">
+        
+        {/* LEFT COLUMN: VISUALIZATIONS */}
+        <div className="workflow-column">
+          <section className="card" style={{ padding: '35px', borderLeft: '5px solid var(--primary)', background: 'rgba(59, 130, 246, 0.01)', height: '500px', display: 'flex', flexDirection: 'column' }}>
+            <h3 style={{ margin: '0 0 25px 0', fontWeight: 900, fontSize: '1.1rem', textAlign: 'center', color: 'var(--text)' }}>WEALTH MOMENTUM</h3>
+            <div style={{ flex: 1, width: '100%', position: 'relative' }}>
+              {snapshots.length > 1 ? (
+                <Line data={chartData} options={chartOptions as any} />
+              ) : (
+                <div className="empty-state" style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  Awaiting secondary snapshot for momentum analysis...
+                </div>
+              )}
+            </div>
+          </section>
+
+          <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '30px' }}>
+            <div className="card" style={{ padding: '25px', textAlign: 'center', borderLeft: '5px solid var(--success)' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>PROJECTED ASSETS (1YR)</label>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '10px' }} className="currency positive">
+                ${safeFormat(parseFloat(snapshots[snapshots.length-1]?.total_cash || 0) + (metrics.delta * 12))}
+              </div>
+            </div>
+            <div className="card" style={{ padding: '25px', textAlign: 'center', borderLeft: '5px solid var(--danger)' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>PROJECTED DEBT (1YR)</label>
+              <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '10px' }} className="currency negative">
+                ${safeFormat(Math.max(0, parseFloat(snapshots[snapshots.length-1]?.total_debt || 0) - (metrics.delta * 12)))}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: PREDICTIVE TICKER */}
+        <div className="summary-column">
+          <div className="sticky-ticker-column">
+            <section className="card" style={{ borderLeft: '5px solid var(--primary)', padding: '35px' }}>
+              <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: 'var(--text)' }}>PREDICTIVE TRAJECTORY</h3>
+              
+              <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                <div className="ticker-item card" style={{ padding: '20px' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-muted)', marginBottom: '8px' }}>MONTHLY NET MOMENTUM</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontWeight: 800 }}>Wealth Growth</span>
+                    <span className="currency positive" style={{ fontWeight: 900 }}>+${safeFormat(metrics.delta)}</span>
+                  </div>
+                </div>
+
+                <div className="ticker-item card" style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.02)' }}>
+                  <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '10px' }}>STRATEGY INSIGHT</div>
+                  <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text)' }}>
+                    At your current <strong>{metrics.savingRate.toFixed(1)}%</strong> saving rate, your net worth is projected to increase by <strong>${safeFormat(metrics.delta * 12)}</strong> over the next 12 months.
+                  </p>
+                </div>
+
+                <div style={{ textAlign: 'center', marginTop: '10px' }}>
+                  <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>
+                    *Predictions based on current month activity. Past performance does not guarantee future results.
+                  </div>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+
+      </div>
+
       <style>{`
-        @media (min-width: 1024px) {
-          .trends-page > .grid {
-            grid-template-columns: 1fr 1fr !important;
-          }
-        }
+        .trends-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
+        .accounts-grid-layout { display: grid; grid-template-columns: 1fr; gap: 40px; width: 100%; box-sizing: border-box; padding-bottom: 100px; }
+        @media (min-width: 1024px) { .accounts-grid-layout { grid-template-columns: minmax(0, 1.8fr) minmax(350px, 1.2fr); align-items: start; } }
+        
+        .workflow-column { display: flex; flex-direction: column; width: 100%; box-sizing: border-box; }
+        .sticky-ticker-column { position: sticky; top: 100px; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: none; }
+        .sticky-ticker-column::-webkit-scrollbar { display: none; }
+
+        .ticker-item { border: 2px solid var(--border) !important; background: var(--bg); transition: all 0.2s ease; }
+        .ticker-item:hover { border-color: var(--primary) !important; transform: translateX(-4px); }
+        .empty-state { text-align: center; color: var(--text-muted); font-size: 0.85rem; font-weight: 700; border: 2px dashed var(--border); border-radius: 16px; padding: 40px; }
       `}</style>
     </div>
   );

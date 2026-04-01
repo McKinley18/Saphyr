@@ -25,6 +25,7 @@ router.use(authMiddleware);
 
 // User/Settings Routes
 router.post('/auth/update-password', AuthController.updatePassword);
+router.post('/auth/reset-account', AuthController.resetAccount);
 router.put('/auth/preferences', AuthController.updatePreferences);
 router.delete('/auth/delete-account', AuthController.deleteAccount);
 

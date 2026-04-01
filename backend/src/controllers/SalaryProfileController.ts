@@ -10,12 +10,11 @@ export class SalaryProfileController {
       const profile = await db('salary_profiles').where({ user_id: userId }).orderBy('updated_at', 'desc').first();
       const taxProfile = await db('tax_profiles').where({ user_id: userId }).first();
       
-      // Handle the case where deductions table might not exist yet or fail
       let deductions = [];
       try {
         deductions = await db('custom_deductions').where({ user_id: userId });
       } catch (e) {
-        console.warn("Deductions table not found, skipping.");
+        console.warn("Deductions table not found or missing columns.");
       }
       
       if (profile) {
@@ -28,6 +27,7 @@ export class SalaryProfileController {
           is_hourly: !!profile.is_hourly,
           manual_tax_amount: Number(profile.manual_tax_amount) || 0,
           use_manual_tax: !!profile.use_manual_tax,
+          state: profile.state || 'WA',
           custom_deductions: deductions,
           updated_at: profile.updated_at
         });
@@ -51,7 +51,8 @@ export class SalaryProfileController {
         hours_per_week,
         is_hourly,
         manual_tax_amount,
-        use_manual_tax
+        use_manual_tax,
+        state
       } = req.body;
       
       const salaryNum = parseFloat(annual_salary) || 0;
@@ -63,30 +64,19 @@ export class SalaryProfileController {
         updated_at: new Date()
       };
 
-      // Only add new columns if they exist in schema or handle them safely
       if (hourly_rate !== undefined) profileData.hourly_rate = parseFloat(hourly_rate) || 0;
       if (hours_per_week !== undefined) profileData.hours_per_week = parseInt(hours_per_week) || 0;
       if (is_hourly !== undefined) profileData.is_hourly = !!is_hourly;
       if (manual_tax_amount !== undefined) profileData.manual_tax_amount = parseFloat(manual_tax_amount) || 0;
       if (use_manual_tax !== undefined) profileData.use_manual_tax = !!use_manual_tax;
+      if (state !== undefined) profileData.state = state;
 
       const existingSal = await db('salary_profiles').where({ user_id: userId }).first();
       
-      try {
-        if (existingSal) {
-          await db('salary_profiles').where({ user_id: userId }).update(profileData);
-        } else {
-          await db('salary_profiles').insert({ user_id: userId, ...profileData });
-        }
-      } catch (dbError: any) {
-        // Fallback for missing columns: only update the basics
-        console.error("DB Update failed, trying fallback basics:", dbError.message);
-        const basicData = { annual_salary: salaryNum, '401k_percent': pctDecimal, updated_at: new Date() };
-        if (existingSal) {
-          await db('salary_profiles').where({ user_id: userId }).update(basicData);
-        } else {
-          await db('salary_profiles').insert({ user_id: userId, ...basicData });
-        }
+      if (existingSal) {
+        await db('salary_profiles').where({ user_id: userId }).update(profileData);
+      } else {
+        await db('salary_profiles').insert({ user_id: userId, ...profileData });
       }
 
       if (filing_status) {
@@ -109,12 +99,13 @@ export class SalaryProfileController {
   static async addCustomDeduction(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { name, amount, is_pre_tax } = req.body;
+      const { name, amount, is_pre_tax, frequency } = req.body;
       await db('custom_deductions').insert({
         user_id: userId,
         name,
         amount: parseFloat(amount) || 0,
-        is_pre_tax: !!is_pre_tax
+        is_pre_tax: !!is_pre_tax,
+        frequency: frequency || 'monthly'
       });
       const newEstimate = await TaxService.calculateTaxEstimate(userId as string);
       res.json({ message: 'Deduction added', taxEstimate: newEstimate });

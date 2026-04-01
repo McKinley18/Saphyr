@@ -25,9 +25,12 @@ interface DashboardProps {
   accounts: any[];
   transactions: any[];
   incomeSources: any[];
+  snapshots?: any[];
 }
 
-const SortableItem = React.memo((props: { id: string; children: React.ReactNode; isEditMode: boolean }) => {
+const ACCENT_OPTIONS = ['var(--primary)', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#fb7185', '#64748b'];
+
+const SortableItem = React.memo((props: { id: string; children: React.ReactNode; isEditMode: boolean; color: string; onColorChange: (id: string, color: string) => void }) => {
   const {
     attributes,
     listeners,
@@ -48,24 +51,31 @@ const SortableItem = React.memo((props: { id: string; children: React.ReactNode;
   return (
     <div ref={setNodeRef} style={style} {...attributes}>
       {props.isEditMode && (
-        <div 
-          {...listeners} 
-          style={{ 
-            position: 'absolute', 
-            top: '10px', 
-            right: '10px', 
-            background: 'var(--primary)', 
-            color: 'white', 
-            padding: '4px 8px', 
-            borderRadius: '8px', 
-            fontSize: '0.7rem', 
-            cursor: 'grab',
-            zIndex: 10,
-            fontWeight: 800,
-            boxShadow: '0 0 10px var(--primary)'
-          }}
-        >
-          DRAG TO MOVE
+        <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '8px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.5)', padding: '4px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+            {ACCENT_OPTIONS.map(c => (
+              <button 
+                key={c} 
+                onClick={() => props.onColorChange(props.id, c)}
+                style={{ width: '14px', height: '14px', borderRadius: '50%', background: c, border: props.color === c ? '1.5px solid white' : 'none', cursor: 'pointer', padding: 0, marginTop: 0 }}
+              />
+            ))}
+          </div>
+          <div 
+            {...listeners} 
+            style={{ 
+              background: 'var(--primary)', 
+              color: 'var(--text)', 
+              padding: '4px 8px', 
+              borderRadius: '8px', 
+              fontSize: '0.6rem', 
+              cursor: 'grab',
+              fontWeight: 800,
+              boxShadow: '0 0 10px var(--primary)'
+            }}
+          >
+            MOVE
+          </div>
         </div>
       )}
       {props.children}
@@ -77,14 +87,20 @@ const Dashboard: React.FC<DashboardProps> = ({
   taxEstimate,
   accounts,
   transactions,
-  incomeSources
+  incomeSources,
+  snapshots = []
 }) => {
   const { isPrivacyMode, togglePrivacyMode, isEditMode } = useAuth();
   const navigate = useNavigate();
 
   const [boxOrder, setBoxOrder] = useState<string[]>(() => {
-    const saved = localStorage.getItem('saphyr_dashboard_order');
-    return saved ? JSON.parse(saved) : ['welcome', 'guide', 'budget', 'bills', 'snapshot', 'activity'];
+    const saved = localStorage.getItem('saphyr_dashboard_order_v2');
+    return saved ? JSON.parse(saved) : ['welcome', 'guide', 'capital', 'accounts_overview', 'bills', 'snapshot', 'activity'];
+  });
+
+  const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
+    const saved = localStorage.getItem('saphyr_dashboard_colors');
+    return saved ? JSON.parse(saved) : {};
   });
 
   const sensors = useSensors(
@@ -99,10 +115,16 @@ const Dashboard: React.FC<DashboardProps> = ({
         const oldIndex = items.indexOf(active.id as string);
         const newIndex = items.indexOf(over?.id as string);
         const newOrder = arrayMove(items, oldIndex, newIndex);
-        localStorage.setItem('saphyr_dashboard_order', JSON.stringify(newOrder));
+        localStorage.setItem('saphyr_dashboard_order_v2', JSON.stringify(newOrder));
         return newOrder;
       });
     }
+  };
+
+  const handleColorChange = (id: string, color: string) => {
+    const newColors = { ...boxColors, [id]: color };
+    setBoxColors(newColors);
+    localStorage.setItem('saphyr_dashboard_colors', JSON.stringify(newColors));
   };
 
   // Memoized Calculations
@@ -110,9 +132,6 @@ const Dashboard: React.FC<DashboardProps> = ({
     const now = new Date();
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
-    const today = now.getDate();
-    const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-    const daysRemaining = lastDayOfMonth - today + 1;
 
     const monthlyBills = (accounts || [])
       .filter(acc => acc?.is_bill)
@@ -132,8 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       })
       .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
 
-    const remainingBudget = startingBudget - spentThisMonth;
-    const dailyPower = Math.max(0, remainingBudget / daysRemaining);
+    const remainingCapital = startingBudget - spentThisMonth;
 
     const totalCash = (accounts || [])
       .filter(acc => acc && !acc.is_bill && (['Checking', 'Savings', 'Cash Accounts'].includes(acc.type) || acc.group_name === 'Cash Accounts' || parseFloat(acc.balance || '0') > 0))
@@ -143,21 +161,27 @@ const Dashboard: React.FC<DashboardProps> = ({
       .filter(acc => acc && (acc.is_bill || ['Credit Card', 'Loan'].includes(acc.type) || parseFloat(acc.balance || '0') < 0))
       .reduce((sum, acc) => sum + Math.abs(parseFloat(acc.balance || '0')), 0);
 
+    const liquidAccountsList = (accounts || [])
+      .filter(acc => !acc.is_bill && parseFloat(acc.balance) !== 0)
+      .sort((a, b) => parseFloat(b.balance) - parseFloat(a.balance));
+
+    const yesterday = snapshots[1] || snapshots[0];
+    const yesterdayNetWorth = yesterday ? parseFloat(yesterday.net_worth) : (totalCash - totalDebt);
+    const momentum = (totalCash - totalDebt) - yesterdayNetWorth;
+
     return {
-      today,
-      lastDayOfMonth,
       monthlyBills,
       startingBudget,
       spentThisMonth,
-      remainingBudget,
-      dailyPower,
+      remainingCapital,
       totalCash,
       totalDebt,
-      netWorth: totalCash - totalDebt
+      netWorth: totalCash - totalDebt,
+      liquidAccountsList,
+      momentum
     };
-  }, [accounts, transactions, incomeSources, taxEstimate]);
+  }, [accounts, transactions, incomeSources, taxEstimate, snapshots]);
 
-  // Upcoming Bills (Memoized)
   const billsData = useMemo(() => {
     const now = new Date();
     const today = now.getDate();
@@ -191,23 +215,24 @@ const Dashboard: React.FC<DashboardProps> = ({
 
   const renderBox = (id: string) => {
     const { 
-      remainingBudget, dailyPower, spentThisMonth, startingBudget, 
-      totalCash, totalDebt, netWorth, monthlyBills,
-      today, lastDayOfMonth 
+      remainingCapital, netWorth, monthlyBills,
+      liquidAccountsList, momentum
     } = metrics;
+    
+    const boxColor = boxColors[id] || 'var(--primary)';
 
     switch (id) {
       case 'welcome':
         return (accounts || []).length === 0 ? (
-          <div className="card" style={{ border: '2px solid var(--primary)', background: 'rgba(59, 130, 246, 0.05)', animation: 'pulse 3s infinite', marginBottom: '20px' }}>
-            <h2 style={{ color: 'var(--primary)', marginBottom: '15px' }}>Welcome to Saphyr</h2>
+          <div className="card" style={{ border: `2px solid ${boxColor}`, background: 'rgba(255,255,255,0.02)', animation: 'pulse 3s infinite', marginBottom: '20px' }}>
+            <h2 style={{ color: boxColor, marginBottom: '15px' }}>Welcome to Saphyr</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>1</div>
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: boxColor, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>1</div>
                 <div style={{ fontSize: '0.9rem' }}>Set your earnings in the <strong>Income</strong> tab.</div>
               </div>
               <div style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: 'var(--primary)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>2</div>
+                <div style={{ width: '30px', height: '30px', borderRadius: '50%', background: boxColor, color: 'var(--text)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900 }}>2</div>
                 <div style={{ fontSize: '0.9rem' }}>Add Checking/Savings in <strong>Accounts</strong>.</div>
               </div>
             </div>
@@ -216,50 +241,60 @@ const Dashboard: React.FC<DashboardProps> = ({
       case 'guide':
         return (
           <div style={{ marginBottom: '20px' }}>
-            <UserGuide guideKey="dashboard" title="Dashboard Summary">
-              <p style={{ fontSize: '0.85rem' }}>Your unified financial view. Subscriptions and Bills are subtracted automatically to show your true "Daily Spending Power."</p>
+            <UserGuide guideKey="dashboard_v2" title="Unified Status">
+              <p style={{ fontSize: '0.85rem' }}>Your top-level summary. "Available Capital" represents your truly disposable funds after all monthly obligations and logged spending.</p>
             </UserGuide>
           </div>
         );
-      case 'budget':
-        const spendingProgress = startingBudget > 0 ? Math.min(100, (spentThisMonth / startingBudget) * 100) : 0;
+      case 'capital':
         return (
-          <div className="card highlight" onClick={() => !isEditMode && navigate('/transactions')} style={{ borderLeft: '5px solid var(--primary)', cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <label style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 800, letterSpacing: '0.05em' }}>MONTHLY REMAINDER</label>
-              <button onClick={(e) => { e.stopPropagation(); togglePrivacyMode(); }} style={{ width: 'auto', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.6rem', fontWeight: 800 }}>{isPrivacyMode ? 'SHOW' : 'HIDE'}</button>
+          <div className="card highlight dashboard-hero-card" onClick={() => !isEditMode && navigate('/transactions')} style={{ borderLeft: `5px solid ${boxColor}`, cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px', textAlign: 'center', padding: '50px 20px', position: 'relative' }}>
+            {/* Ambient Aura */}
+            <div style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%, -50%)', width: '80%', height: '80%', background: boxColor, filter: 'blur(100px)', opacity: 0.08, zIndex: 0, pointerEvents: 'none' }}></div>
+            
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', position: 'relative' }}>
+                <label style={{ fontSize: '0.85rem', color: 'var(--text)', fontWeight: 900, letterSpacing: '0.15em' }}>Available Capital</label>
+                <button onClick={(e) => { e.stopPropagation(); togglePrivacyMode(); }} style={{ position: 'absolute', right: 0, width: 'auto', background: 'rgba(255,255,255,0.05)', border: '1px solid var(--border)', padding: '4px 10px', borderRadius: '20px', fontSize: '0.6rem', fontWeight: 800 }}>{isPrivacyMode ? 'SHOW' : 'HIDE'}</button>
+              </div>
+              <h2 style={{ fontSize: '3.5rem', margin: '20px 0', fontWeight: 900, letterSpacing: '-0.04em' }} className={`currency ${remainingCapital >= 0 ? 'positive' : 'negative'}`}>${safeFormat(remainingCapital)}</h2>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                  Unallocated Funds
+                </div>
+                {momentum !== 0 && (
+                  <div style={{ fontSize: '0.7rem', fontWeight: 800, color: momentum > 0 ? 'var(--success)' : 'var(--danger)', background: 'rgba(255,255,255,0.03)', padding: '4px 12px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+                    {momentum > 0 ? '▲' : '▼'} ${safeFormat(Math.abs(momentum))} SINCE YESTERDAY
+                  </div>
+                )}
+              </div>
             </div>
-            <h2 style={{ fontSize: '3rem', margin: '15px 0', fontWeight: 900 }} className={`currency ${remainingBudget >= 0 ? 'positive' : 'negative'}`}>${safeFormat(remainingBudget)}</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div style={{ padding: '12px', background: remainingBudget >= 0 ? 'rgba(34, 197, 94, 0.05)' : 'rgba(244, 63, 94, 0.05)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 800 }}>DAILY POWER</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900 }} className="currency positive">${safeFormat(dailyPower)}</div>
-              </div>
-              <div style={{ padding: '12px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px solid var(--border)' }}>
-                <div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 800 }}>MONTH PROGRESS</div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 900 }}>{((today / lastDayOfMonth) * 100).toFixed(0)}%</div>
-              </div>
-            </div>
-            <div style={{ marginTop: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.8rem', fontWeight: 700 }}>
-                <span>Spent: <span className="currency">${safeFormat(spentThisMonth)}</span></span>
-                <span>{spendingProgress.toFixed(0)}%</span>
-              </div>
-              <div style={{ width: '100%', height: '8px', background: 'rgba(255,255,255,0.05)', borderRadius: '4px', overflow: 'hidden' }}>
-                <div style={{ width: `${spendingProgress}%`, height: '100%', background: 'var(--primary)', transition: 'width 1s ease' }}></div>
-              </div>
+          </div>
+        );
+      case 'accounts_overview':
+        return (
+          <div className="card dashboard-item-card" onClick={() => !isEditMode && navigate('/accounts')} style={{ borderLeft: `5px solid ${boxColor}`, cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '20px', letterSpacing: '0.05em', textAlign: 'center' }}>Accounts Overview</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {liquidAccountsList.slice(0, 4).map((acc, idx) => (
+                <div key={acc.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: idx === 0 ? 'none' : '1px solid var(--item-divider)' }}>
+                  <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{acc.name}</span>
+                  <span style={{ fontWeight: 900, fontSize: '1.1rem' }} className={`currency ${parseFloat(acc.balance) >= 0 ? 'positive' : 'negative'}`}>${safeFormat(acc.balance)}</span>
+                </div>
+              ))}
+              {liquidAccountsList.length === 0 && <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>No active accounts found.</p>}
             </div>
           </div>
         );
       case 'bills':
         return (
-          <div className="card" onClick={() => !isEditMode && navigate('/bills')} style={{ borderLeft: '5px solid #8b5cf6', cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '15px' }}>
+          <div className="card dashboard-item-card" onClick={() => !isEditMode && navigate('/bills')} style={{ borderLeft: `5px solid ${boxColor}`, cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px', textAlign: 'center' }}>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', marginBottom: '15px', position: 'relative' }}>
               <h3 style={{ margin: 0, color: 'var(--text)', fontWeight: 800 }}>Bills Due</h3>
-              <span style={{ fontSize: '0.65rem', background: '#8b5cf6', color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>{billsData.totalCount} TOTAL</span>
+              <span style={{ position: 'absolute', right: 0, fontSize: '0.65rem', background: boxColor, color: 'var(--text)', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>{billsData.totalCount} TOTAL</span>
             </div>
             {billsData.urgent.length > 0 ? (
-              <div style={{ background: 'rgba(244, 63, 94, 0.1)', padding: '12px', borderRadius: '12px', border: '1px solid var(--danger)', marginBottom: '10px' }}>
+              <div style={{ background: 'rgba(255,255,255,0.03)', padding: '15px', borderRadius: '12px', border: `1px solid ${boxColor}`, marginBottom: '10px' }}>
                 {billsData.urgent.map(b => (
                   <div key={b.id} style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.9rem', fontWeight: 700 }}>
                     <span>{b.name}</span>
@@ -267,45 +302,45 @@ const Dashboard: React.FC<DashboardProps> = ({
                   </div>
                 ))}
               </div>
-            ) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', textAlign: 'center', margin: '10px 0' }}>No bills due in 48h.</p>}
-            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid var(--border)', paddingTop: '10px', fontSize: '0.85rem' }}>
-              <span style={{ color: 'var(--text-muted)' }}>Total Obligations</span>
-              <span style={{ fontWeight: 800 }} className="currency">-${safeFormat(monthlyBills)}</span>
+            ) : <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '15px 0' }}>No bills due in 48h.</p>}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', borderTop: '1px solid #111827', paddingTop: '15px', marginTop: '5px' }}>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Total Obligations</span>
+              <span style={{ fontWeight: 900, fontSize: '1.25rem', marginTop: '5px' }} className="currency negative">-${safeFormat(monthlyBills)}</span>
             </div>
           </div>
         );
       case 'snapshot':
         return (
-          <div className="card" onClick={() => !isEditMode && navigate('/accounts')} style={{ borderLeft: '5px solid var(--text-muted)', cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1rem', marginBottom: '15px', fontWeight: 800, color: 'var(--text)' }}>Technical Snapshot</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Liquidity</span>
-                <span style={{ fontWeight: 800 }} className="currency positive">${safeFormat(totalCash)}</span>
+          <div className="card dashboard-item-card" onClick={() => !isEditMode && navigate('/accounts')} style={{ borderLeft: `5px solid ${boxColor}`, cursor: isEditMode ? 'default' : 'pointer', marginBottom: '20px', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '1rem', marginBottom: '20px', fontWeight: 800, color: 'var(--text)' }}>Technical Snapshot</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--item-divider)', paddingBottom: '15px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 700 }}>LIQUIDITY</span>
+                <span style={{ fontWeight: 900 }} className="currency positive">${safeFormat(metrics.totalCash)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Total Debt</span>
-                <span style={{ fontWeight: 800 }} className="currency negative">-${safeFormat(totalDebt)}</span>
+              <div style={{ display: 'flex', justifyContent: 'space-between', borderBottom: '1px solid var(--item-divider)', paddingBottom: '15px' }}>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 700 }}>TOTAL DEBT</span>
+                <span style={{ fontWeight: 900 }} className="currency negative">-${safeFormat(metrics.totalDebt)}</span>
               </div>
-              <div style={{ marginTop: '5px', padding: '12px', background: 'var(--bg)', borderRadius: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>NET WORTH</span>
-                <span style={{ fontWeight: 900, fontSize: '1.2rem' }} className={`currency ${netWorth >= 0 ? 'positive' : 'negative'}`}>${safeFormat(netWorth)}</span>
+              <div style={{ marginTop: '5px', padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '16px', border: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontWeight: 900, fontSize: '0.9rem', color: 'var(--text-muted)' }}>NET WORTH</span>
+                <span style={{ fontWeight: 900, fontSize: '1.5rem' }} className={`currency ${netWorth >= 0 ? 'positive' : 'negative'}`}>${safeFormat(netWorth)}</span>
               </div>
             </div>
           </div>
         );
       case 'activity':
         return (
-          <div className="card" style={{ borderLeft: '5px solid var(--primary)', marginBottom: '20px' }}>
-            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '15px' }}>Recent Logs</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {(transactions || []).slice(0, 5).map(tx => (
-                <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.85rem' }}>
+          <div className="card dashboard-item-card" style={{ borderLeft: `5px solid ${boxColor}`, marginBottom: '20px' }}>
+            <h3 style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', marginBottom: '20px', textAlign: 'center' }}>Recent Logs</h3>
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {(transactions || []).slice(0, 5).map((tx, idx) => (
+                <div key={tx.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 0', borderTop: idx === 0 ? 'none' : '1px solid var(--item-divider)' }}>
                   <div>
-                    <div style={{ fontWeight: 700 }}>{tx.category}</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>{tx.date?.split('T')[0]}</div>
+                    <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>{tx.category}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 600 }}>{tx.date?.split('T')[0]}</div>
                   </div>
-                  <span style={{ fontWeight: 800 }} className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`}>{tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}</span>
+                  <span style={{ fontWeight: 900, fontSize: '1rem' }} className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`}>{tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}</span>
                 </div>
               ))}
             </div>
@@ -319,9 +354,24 @@ const Dashboard: React.FC<DashboardProps> = ({
     <div className="dashboard" style={{ maxWidth: '800px', margin: '0 auto' }}>
       <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
         <SortableContext items={boxOrder} strategy={verticalListSortingStrategy}>
-          {boxOrder.map(id => <SortableItem key={id} id={id} isEditMode={isEditMode}>{renderBox(id)}</SortableItem>)}
+          {boxOrder.map(id => (
+            <SortableItem 
+              key={id} 
+              id={id} 
+              isEditMode={isEditMode} 
+              color={boxColors[id] || 'var(--primary)'}
+              onColorChange={handleColorChange}
+            >
+              {renderBox(id)}
+            </SortableItem>
+          ))}
         </SortableContext>
       </DndContext>
+      <style>{`
+        .dashboard-hero-card:hover { transform: translateY(-2px); box-shadow: 0 10px 40px -10px rgba(59, 130, 246, 0.2); }
+        .dashboard-item-card:hover { transform: translateY(-2px); border-color: var(--border) !important; background: rgba(255,255,255,0.02) !important; }
+        .dashboard-hero-card, .dashboard-item-card { transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+      `}</style>
     </div>
   );
 };
