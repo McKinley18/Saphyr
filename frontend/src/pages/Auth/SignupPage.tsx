@@ -39,7 +39,7 @@ const SignupPage: React.FC = () => {
       if (data.error) {
         setError(data.error);
       } else {
-        login(data.user, data.token);
+        login(data.user);
         navigate('/');
       }
     } catch (err) {

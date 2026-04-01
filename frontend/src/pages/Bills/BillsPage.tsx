@@ -1,29 +1,24 @@
 import React, { useState, useMemo } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
+import { deleteAccount, updateAccount } from '../../services/api';
 import BillForm from '../../components/BillForm/BillForm';
 import BillSimulator from '../../components/BillSimulator/BillSimulator';
-import { deleteAccount } from '../../services/api';
-import { getOrdinal } from '../../services/utils';
-import { useModal } from '../../context/ModalContext';
 import { useAuth } from '../../context/AuthContext';
+import { useModal } from '../../context/ModalContext';
 
 interface BillsPageProps {
   userId: string;
   accounts: any[];
   loadData: () => void;
-  taxEstimate: any;
-  incomeSources: any[];
 }
 
 const ACCENT_OPTIONS = ['var(--primary)', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#fb7185', '#64748b'];
 
-const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData, taxEstimate, incomeSources }) => {
+const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => {
+  const { isPrivacyMode, isEditMode } = useAuth();
   const { confirm } = useModal();
-  const { isEditMode } = useAuth();
-  
-  const [viewMode, setViewMode] = useState<'table' | 'box'>(() => {
-    return (localStorage.getItem('saphyr_bills_view') as 'table' | 'box') || 'table';
-  });
+  const [viewMode, setViewMode] = useState<'table' | 'box'>('box');
+  const [activeTab, setActiveTab] = useState<'tracker' | 'simulator'>('tracker');
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('saphyr_bills_colors');
@@ -37,65 +32,24 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData, taxEs
   };
 
   const safeFormat = (val: any) => {
+    if (isPrivacyMode) return '••••';
     const num = parseFloat(val || '0');
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const billAccounts = useMemo(() => (accounts || []).filter(acc => acc && acc.is_bill), [accounts]);
+  const bills = (accounts || []).filter(acc => acc.is_bill);
+  const totalMonthlyBills = bills.reduce((sum, b) => sum + Math.abs(parseFloat(b.balance || '0')), 0);
 
-  const groupedBills = useMemo(() => {
-    return billAccounts.reduce((groups: any, acc: any) => {
-      const group = acc.group_name || 'Uncategorized';
-      if (!groups[group]) groups[group] = [];
-      groups[group].push(acc);
-      return groups;
-    }, {});
-  }, [billAccounts]);
-
-  const groupNames = Object.keys(groupedBills).sort();
-  const totalBills = billAccounts.reduce((sum, acc) => sum + Math.abs(parseFloat(acc.balance || '0')), 0);
-
-  const totalInterestDrag = billAccounts.reduce((sum, acc) => {
-    const apr = parseFloat(acc.apr || '0');
-    const balance = Math.abs(parseFloat(acc.balance || '0'));
-    if (apr > 0) return sum + (balance * apr / 12);
-    return sum;
-  }, 0);
-
-  const healthMetrics = useMemo(() => {
-    const monthlyNet = parseFloat(taxEstimate?.monthly_net || 0);
-    const totalOtherIncome = (incomeSources || []).reduce((sum, s) => {
-      const amt = parseFloat(s.amount);
-      const multiplier = s.frequency === 'weekly' ? (52/12) : (s.frequency === 'bi-weekly' ? (26/12) : 1);
-      return sum + (amt * multiplier);
-    }, 0);
-    const totalInflow = monthlyNet + totalOtherIncome;
-    const dti = totalInflow > 0 ? (totalBills / totalInflow) * 100 : 0;
-    
-    const nonEssentialBills = billAccounts
-      .filter(b => b.type !== 'Rent' && b.type !== 'Mortgage')
-      .sort((a, b) => Math.abs(parseFloat(a.balance)) - Math.abs(parseFloat(b.balance)));
-    
-    const nextSnowballTarget = nonEssentialBills[0];
-
-    return { totalInflow, dti, isHighRisk: dti > 50, nextSnowballTarget };
-  }, [taxEstimate, incomeSources, totalBills, billAccounts]);
-
-  const upcomingTimeline = useMemo(() => {
-    const today = new Date().getDate();
-    return billAccounts
-      .filter(b => b.due_day && Math.abs(b.due_day - today) <= 7)
-      .sort((a, b) => a.due_day - b.due_day);
-  }, [billAccounts]);
-
-  const handleDelete = async (id: string, name: string) => {
-    const isConfirmed = await confirm({ title: 'Remove Obligation', message: `Are you sure you want to remove "${name}"?`, confirmLabel: 'REMOVE BILL', isDanger: true });
+  const handleDeleteBill = async (id: string, name: string) => {
+    const isConfirmed = await confirm({ title: 'Delete Obligation', message: `Are you sure you want to remove the "${name}" obligation?`, confirmLabel: 'DELETE OBLIGATION', isDanger: true });
     if (isConfirmed) { try { await deleteAccount(id); loadData(); } catch (err) { console.error(err); } }
   };
 
-  const toggleView = (mode: 'table' | 'box') => {
-    setViewMode(mode);
-    localStorage.setItem('saphyr_bills_view', mode);
+  const handleTogglePaid = async (bill: any) => {
+    try {
+      await updateAccount(bill.id, { is_paid: !bill.is_paid });
+      loadData();
+    } catch (err) { console.error(err); }
   };
 
   const renderColorPicker = (id: string) => (
@@ -110,114 +64,94 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData, taxEs
 
   return (
     <div className="bills-page">
-      <UserGuide guideKey="bills_v4" title="Obligation Management">
-        <p>Step 1: Map your recurring liabilities. Step 2: Analyze debt-to-income ratios. Step 3: Execute payoff simulations.</p>
+      <UserGuide guideKey="bills_v2" title="Obligation Command Deck">
+        <p>Manage your fixed monthly costs. Mark bills as [PAID] to clear them from your current month's liquidity projection.</p>
       </UserGuide>
 
-      <div className="tech-specs-bar" style={{ marginBottom: '40px', padding: '10px 25px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '20px', width: '100%' }}>
-          <div style={{ flexShrink: 0, fontSize: '0.65rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '0.1em', width: '100px', textAlign: 'center' }}>UPCOMING<br/>DUE DATES</div>
-          <div style={{ display: 'flex', gap: '15px', overflowX: 'auto', scrollbarWidth: 'none', padding: '5px 0' }}>
-            {upcomingTimeline.map(bill => {
-              const isDueToday = bill.due_day === new Date().getDate();
-              return (
-                <div key={bill.id} className={isDueToday ? 'today-pulse' : ''} style={{ background: isDueToday ? 'rgba(59, 130, 246, 0.1)' : 'rgba(255,255,255,0.02)', border: `1px solid ${isDueToday ? 'var(--primary)' : 'var(--border)'}`, borderRadius: '10px', padding: '8px 15px', minWidth: '120px', textAlign: 'center' }}>
-                  <div style={{ fontSize: '0.6rem', color: isDueToday ? 'var(--primary)' : 'var(--text-muted)', fontWeight: 800 }}>{isDueToday ? 'DUE TODAY' : `THE ${getOrdinal(bill.due_day)}`}</div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 800, marginTop: '2px', whiteSpace: 'nowrap' }}>{bill.name}</div>
-                </div>
-              );
-            })}
-            {upcomingTimeline.length === 0 && <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontStyle: 'italic' }}>No obligations due in the next 7 days.</div>}
-          </div>
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--danger)' }}>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Burn</label>
+          <div className="gauge-val" style={{ color: 'var(--danger)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>${safeFormat(totalMonthlyBills)}</div>
+        </div>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Obligations</label>
+          <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>{bills.length}</div>
+        </div>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Next Due</label>
+          <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>--</div>
         </div>
       </div>
 
-      <div className="accounts-grid-layout">
-        <div className="workflow-column">
-          <section className="card" style={{ borderLeft: `5px solid ${boxColors['health'] || 'var(--primary)'}`, background: 'rgba(255,255,255,0.01)', marginBottom: '30px', position: 'relative', padding: '35px' }}>
-            {renderColorPicker('health')}
-            <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: 'var(--text)' }}>OBLIGATION HEALTH</h3>
-            <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div style={{ textAlign: 'center' }}>
-                <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900 }}>DEBT-TO-INCOME</label>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: healthMetrics.dti > 40 ? 'var(--danger)' : 'var(--success)' }}>{healthMetrics.dti.toFixed(1)}%</div>
-              </div>
-              <div style={{ textAlign: 'center' }}>
-                <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900 }}>MONTHLY INTEREST</label>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--warning)' }}>-${safeFormat(totalInterestDrag)}</div>
-              </div>
-            </div>
-            {healthMetrics.nextSnowballTarget && (
-              <div style={{ marginTop: '20px', padding: '15px', background: 'rgba(59, 130, 246, 0.05)', borderRadius: '12px', border: '1px solid var(--primary)', textAlign: 'center' }}>
-                <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--primary)', letterSpacing: '0.1em', marginBottom: '5px' }}>SNOWBALL PAYOFF INSIGHT</div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700 }}>Eliminate <span style={{ color: 'var(--primary)' }}>{healthMetrics.nextSnowballTarget.name}</span> to free up <span className="currency positive">${safeFormat(healthMetrics.nextSnowballTarget.balance)}</span> monthly.</div>
-              </div>
-            )}
-          </section>
+      <div className="mode-switcher-v2" style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
+        <button onClick={() => setActiveTab('tracker')} style={{ flex: 1, background: activeTab === 'tracker' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'tracker' ? 'white' : 'var(--text-muted)' }}>OBLIGATION TRACKER</button>
+        <button onClick={() => setActiveTab('simulator')} style={{ flex: 1, background: activeTab === 'simulator' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'simulator' ? 'white' : 'var(--text-muted)' }}>LOAN SIMULATOR</button>
+      </div>
 
-          <BillSimulator bills={billAccounts} customColor={boxColors['simulator']} renderColorPicker={() => renderColorPicker('simulator')} />
-          <div style={{ marginTop: '30px' }}>
-            <BillForm userId={userId} onBillAdded={loadData} groups={groupNames} customColor={boxColors['form']} renderColorPicker={() => renderColorPicker('form')} />
-          </div>
-        </div>
+      {activeTab === 'tracker' ? (
+        <div className="accounts-grid-layout">
+          <div className="workflow-column">
+            <section className="card glow-danger" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--danger)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
+              {renderColorPicker('log')}
+              <BillForm onBillAdded={loadData} customColor={boxColors['log'] || 'var(--danger)'} />
+            </section>
 
-        <div className="summary-column">
-          <div className="sticky-ticker-column">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>OBLIGATION TICKER</h3>
-              <div style={{ display: 'flex', background: 'rgba(255,255,255,0.05)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border)' }}>
-                <button onClick={() => toggleView('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TAB</button>
-                <button onClick={() => toggleView('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
+              <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>OBLIGATIONS</h3>
+              <div style={{ display: 'flex', background: 'var(--subtle-overlay)', padding: '3px', borderRadius: '8px', border: '1px solid var(--border)' }}>
+                <button onClick={() => setViewMode('table')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'table' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>TAB</button>
+                <button onClick={() => setViewMode('box')} style={{ padding: '4px 10px', fontSize: '0.6rem', background: viewMode === 'box' ? 'var(--primary-gradient)' : 'transparent', border: 'none', borderRadius: '6px', color: 'white', cursor: 'pointer', boxShadow: 'none', width: 'auto', marginTop: 0 }}>BOX</button>
               </div>
             </div>
-            <div className="card" style={{ borderLeft: '5px solid var(--danger)', padding: '20px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.75rem', fontWeight: 800, color: 'var(--text-muted)' }}>TOTAL MONTHLY</span>
-                <span style={{ fontWeight: 900, fontSize: '1.2rem', color: 'var(--danger)' }}>-${safeFormat(totalBills)}</span>
-              </div>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {groupNames.map(group => {
-                const bills = groupedBills[group];
-                const groupTotal = bills.reduce((sum: number, b: any) => sum + Math.abs(parseFloat(b.balance)), 0);
+
+            <div className="grid" style={{ gridTemplateColumns: viewMode === 'box' ? 'repeat(auto-fill, minmax(280px, 1fr))' : '1fr', gap: '20px' }}>
+              {bills.map(bill => {
+                const bColor = boxColors[bill.id] || 'var(--primary)';
                 return (
-                  <div key={group}>
-                    <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-muted)', marginBottom: '8px', paddingLeft: '5px', display: 'flex', justifyContent: 'space-between' }}><span>{group.toUpperCase()}</span><span>-${safeFormat(groupTotal)}</span></div>
-                    {bills.map((bill: any) => {
-                      const isDebt = bill.type === 'Loan' || bill.type === 'Credit Card';
-                      return (
-                        <div key={bill.id} className="ticker-item card" style={{ padding: '15px', marginBottom: '8px', borderLeft: `3px solid ${isDebt ? 'var(--danger)' : 'var(--primary)'}` }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{bill.name}</div>
-                                <span style={{ fontSize: '0.55rem', fontWeight: 900, background: isDebt ? 'rgba(239, 68, 68, 0.1)' : 'rgba(59, 130, 246, 0.1)', color: isDebt ? 'var(--danger)' : 'var(--primary)', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.05em' }}>{isDebt ? 'DEBT' : 'FIXED'}</span>
-                              </div>
-                              <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '4px' }}>Date: {getOrdinal(bill.due_day)} • {bill.type}</div>
-                            </div>
-                            <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 900, fontSize: '1rem', color: 'var(--danger)' }}>-${safeFormat(bill.balance)}</div><button onClick={() => handleDelete(bill.id, bill.name)} className="remove-btn-minimal" style={{ marginTop: '5px' }}>&times;</button></div>
-                          </div>
-                        </div>
-                      );
-                    })}
+                  <div key={bill.id} className="card glow-primary" style={{ borderTop: `4px solid ${bColor}`, position: 'relative', padding: '25px', opacity: bill.is_paid ? 0.6 : 1 }}>
+                    {renderColorPicker(bill.id)}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-muted)' }}>{bill.name.toUpperCase()}</h4>
+                      <button onClick={() => handleDeleteBill(bill.id, bill.name)} className="remove-btn-minimal" style={{ fontSize: '1.1rem' }}>&times;</button>
+                    </div>
+                    <div style={{ fontSize: '1.8rem', fontWeight: 900, margin: '15px 0', color: 'var(--text)' }}>${safeFormat(Math.abs(bill.balance))}</div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '15px' }}>
+                      <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>DUE: DAY {bill.due_date || '--'}</span>
+                      <button onClick={() => handleTogglePaid(bill)} style={{ width: 'auto', padding: '6px 15px', fontSize: '0.65rem', background: bill.is_paid ? 'var(--success-gradient)' : 'var(--subtle-overlay)', color: bill.is_paid ? 'white' : 'var(--text)' }}>{bill.is_paid ? 'PAID' : 'MARK PAID'}</button>
+                    </div>
                   </div>
                 );
               })}
             </div>
           </div>
+
+          <div className="summary-column">
+            <div className="sticky-ticker-column">
+              <h3 style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--text)', marginBottom: '20px', textAlign: 'center', letterSpacing: '0.1em' }}>HEALTH METRICS</h3>
+              <section className="card glow-primary" style={{ padding: '30px', textAlign: 'center' }}>
+                <label style={{ fontSize: '0.65rem', fontWeight: 800, color: 'var(--text-muted)' }}>DTI RATIO (Fixed)</label>
+                <div style={{ fontSize: '2.5rem', fontWeight: 900, margin: '10px 0', color: 'var(--primary)' }}>--%</div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Percentage of your gross income committed to fixed obligations.</p>
+              </section>
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+          <section className="card glow-primary" style={{ padding: '35px' }}>
+            <BillSimulator />
+          </section>
+        </div>
+      )}
+
       <style>{`
         .bills-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
         .accounts-grid-layout { display: grid; grid-template-columns: 1fr; gap: 40px; width: 100%; box-sizing: border-box; padding-bottom: 100px; }
         @media (min-width: 1024px) { .accounts-grid-layout { grid-template-columns: minmax(0, 1.8fr) minmax(380px, 1.2fr); align-items: start; } }
         .workflow-column { display: flex; flex-direction: column; width: 100%; box-sizing: border-box; }
-        .sticky-ticker-column { position: sticky; top: 100px; max-height: calc(100vh - 150px); overflow-y: auto; scrollbar-width: none; }
-        .ticker-item { border: 2px solid var(--border) !important; background: var(--bg); transition: all 0.2s ease; }
-        .ticker-item:hover { transform: translateX(-4px); border-color: var(--primary) !important; }
-        .remove-btn-minimal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; width: auto; box-shadow: none; font-size: 1.2rem; }
-        @keyframes todayPulse { 0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(59, 130, 246, 0); } 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); } }
-        .today-pulse { animation: todayPulse 2s infinite; }
+        .sticky-ticker-column { position: sticky; top: 100px; }
+        .remove-btn-minimal { background: none; border: none; color: var(--text-muted); cursor: pointer; padding: 0; width: auto; box-shadow: none; }
+        .primary-btn { background: var(--primary-gradient); width: 100%; fontWeight: 900; margin-top: 10px; }
       `}</style>
     </div>
   );

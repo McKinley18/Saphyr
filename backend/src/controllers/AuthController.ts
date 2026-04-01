@@ -7,6 +7,12 @@ import { EmailService } from '../services/EmailService.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'saphyr-secret-key-2025';
+const COOKIE_OPTIONS = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
+  sameSite: 'lax' as const,
+  maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+};
 
 export class AuthController {
   private static userResponse(user: any) {
@@ -47,7 +53,8 @@ export class AuthController {
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-      res.status(201).json({ user: AuthController.userResponse(user), token });
+      res.cookie('token', token, COOKIE_OPTIONS);
+      res.status(201).json({ user: AuthController.userResponse(user) });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -67,11 +74,10 @@ export class AuthController {
         return res.status(401).json({ error: 'Invalid credentials' });
       }
 
-      // Check if 2FA is enabled
       if (user.two_factor_method === 'email') {
         const code = Math.floor(100000 + Math.random() * 900000).toString();
         const codeHash = await bcrypt.hash(code, 10);
-        const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+        const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
 
         await db('users').where({ id: user.id }).update({
           two_factor_code: codeHash,
@@ -89,20 +95,22 @@ export class AuthController {
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
-      // Update last login
       await db('users').where({ id: user.id }).update({ 
         last_login_at: new Date() 
       });
 
       const updatedUser = await db('users').where({ id: user.id }).first();
 
-      res.json({
-        user: AuthController.userResponse(updatedUser),
-        token
-      });
+      res.cookie('token', token, COOKIE_OPTIONS);
+      res.json({ user: AuthController.userResponse(updatedUser) });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
+  }
+
+  static async logout(req: Request, res: Response) {
+    res.clearCookie('token');
+    res.json({ message: 'Logged out successfully' });
   }
 
   static async updatePassword(req: AuthRequest, res: Response) {
@@ -111,14 +119,10 @@ export class AuthController {
       const { currentPassword, newPassword } = req.body;
 
       const user = await db('users').where({ id: userId }).first();
-      if (!user) {
-        return res.status(404).json({ error: 'User not found' });
-      }
+      if (!user) return res.status(404).json({ error: 'User not found' });
 
       const isValid = await bcrypt.compare(currentPassword, user.password_hash);
-      if (!isValid) {
-        return res.status(401).json({ error: 'Current password incorrect' });
-      }
+      if (!isValid) return res.status(401).json({ error: 'Current password incorrect' });
 
       const newHash = await bcrypt.hash(newPassword, 10);
       await db('users').where({ id: userId }).update({ password_hash: newHash });
@@ -133,6 +137,7 @@ export class AuthController {
     try {
       const userId = req.userId;
       await db('users').where({ id: userId }).del();
+      res.clearCookie('token');
       res.json({ message: 'Account deleted' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -163,13 +168,10 @@ export class AuthController {
     try {
       const { email } = req.body;
       const user = await db('users').where({ email }).first();
-
-      if (!user) {
-        return res.json({ message: 'If an account exists, a reset link has been sent' });
-      }
+      if (!user) return res.json({ message: 'If an account exists, a reset link has been sent' });
 
       const resetToken = crypto.randomBytes(32).toString('hex');
-      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour
+      const resetTokenExpiry = new Date(Date.now() + 3600000);
 
       await db('users').where({ id: user.id }).update({
         reset_token: resetToken,
@@ -177,7 +179,6 @@ export class AuthController {
       });
 
       await EmailService.sendResetEmail(email, resetToken);
-
       res.json({ message: 'If an account exists, a reset link has been sent' });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -187,18 +188,14 @@ export class AuthController {
   static async resetPassword(req: Request, res: Response) {
     try {
       const { token, newPassword } = req.body;
-
       const user = await db('users')
         .where({ reset_token: token })
         .andWhere('reset_token_expiry', '>', new Date())
         .first();
 
-      if (!user) {
-        return res.status(400).json({ error: 'Invalid or expired reset token' });
-      }
+      if (!user) return res.status(400).json({ error: 'Invalid or expired reset token' });
 
       const password_hash = await bcrypt.hash(newPassword, 10);
-
       await db('users').where({ id: user.id }).update({
         password_hash,
         reset_token: null,
@@ -214,14 +211,7 @@ export class AuthController {
   static async updatePreferences(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { 
-        auto_logout_minutes, 
-        two_factor_method,
-        accent_color,
-        currency_symbol,
-        visible_tabs,
-        stealth_mode
-      } = req.body;
+      const { auto_logout_minutes, two_factor_method, accent_color, currency_symbol, visible_tabs, stealth_mode } = req.body;
 
       const updateData: any = { updated_at: new Date() };
       if (auto_logout_minutes !== undefined) updateData.auto_logout_minutes = auto_logout_minutes;
@@ -232,13 +222,9 @@ export class AuthController {
       if (stealth_mode !== undefined) updateData.stealth_mode = stealth_mode;
 
       await db('users').where({ id: userId }).update(updateData);
-
       const updatedUser = await db('users').where({ id: userId }).first();
 
-      res.json({ 
-        message: 'Preferences updated',
-        user: AuthController.userResponse(updatedUser)
-      });
+      res.json({ message: 'Preferences updated', user: AuthController.userResponse(updatedUser) });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -247,30 +233,24 @@ export class AuthController {
   static async verify2FA(req: Request, res: Response) {
     try {
       const { userId, code } = req.body;
-
       const user = await db('users').where({ id: userId }).first();
+      
       if (!user || !user.two_factor_code || new Date() > new Date(user.two_factor_expires_at)) {
         return res.status(400).json({ error: 'Code expired or invalid. Please try logging in again.' });
       }
 
       const isValid = await bcrypt.compare(code, user.two_factor_code);
-      if (!isValid) {
-        return res.status(401).json({ error: 'Invalid verification code' });
-      }
+      if (!isValid) return res.status(401).json({ error: 'Invalid verification code' });
 
-      // Clear code after success
-      await db('users').where({ id: userId }).update({
+      await db('users').where({ id: user.id }).update({
         two_factor_code: null,
         two_factor_expires_at: null,
         last_login_at: new Date()
       });
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
-
-      res.json({
-        user: AuthController.userResponse(user),
-        token
-      });
+      res.cookie('token', token, COOKIE_OPTIONS);
+      res.json({ user: AuthController.userResponse(user) });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

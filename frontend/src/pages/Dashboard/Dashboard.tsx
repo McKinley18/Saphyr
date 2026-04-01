@@ -94,7 +94,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
         
         {/* MAIN CAPITAL GAUGE */}
-        <section className="card" style={{ borderLeft: `5px solid ${boxColors['capital'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '50px 30px', textAlign: 'center', position: 'relative' }}>
+        <section className="card glow-primary" style={{ borderLeft: `5px solid ${boxColors['capital'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '50px 30px', textAlign: 'center', position: 'relative' }}>
           {renderColorPicker('capital')}
           <label style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-muted)', letterSpacing: '0.2em' }}>CURRENT AVAILABLE LIQUIDITY</label>
           <div style={{ fontSize: '4.5rem', fontWeight: 900, margin: '20px 0', color: metrics.liquidityPosition >= 0 ? 'var(--text)' : 'var(--danger)' }} className="currency">
@@ -109,14 +109,14 @@ const Dashboard: React.FC<DashboardProps> = ({
 
         <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '25px' }}>
           
-          <div className="card dashboard-item-card" style={{ borderLeft: `5px solid ${boxColors['cash'] || '#10b981'}`, position: 'relative' }}>
+          <div className="card glow-success dashboard-item-card" style={{ borderLeft: `5px solid ${boxColors['cash'] || '#10b981'}`, position: 'relative' }}>
             {renderColorPicker('cash')}
             <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-muted)' }}>TOTAL LIQUID ASSETS</label>
             <div style={{ fontSize: '2rem', fontWeight: 900, marginTop: '10px' }} className="currency positive">${safeFormat(metrics.totalCash)}</div>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '10px' }}>Combined Checking, Savings, and Cash balances.</p>
           </div>
 
-          <div className="card dashboard-item-card" style={{ borderLeft: `5px solid ${boxColors['budget'] || '#8b5cf6'}`, position: 'relative' }}>
+          <div className="card glow-primary dashboard-item-card" style={{ borderLeft: `5px solid ${boxColors['budget'] || '#8b5cf6'}`, position: 'relative' }}>
             {renderColorPicker('budget')}
             <label style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--text-muted)' }}>MONTHLY RUNWAY</label>
             <div style={{ fontSize: '2rem', fontWeight: 900, marginTop: '10px' }}>${safeFormat(metrics.availableMonthlyCapital)}</div>
@@ -126,7 +126,7 @@ const Dashboard: React.FC<DashboardProps> = ({
         </div>
 
         {/* RECENT ACTIVITY TICKER PREVIEW */}
-        <section className="card" style={{ padding: '35px', borderLeft: `5px solid ${boxColors['activity'] || 'var(--primary)'}`, position: 'relative' }}>
+        <section className="card glow-primary" style={{ padding: '35px', borderLeft: `5px solid ${boxColors['activity'] || 'var(--primary)'}`, position: 'relative' }}>
           {renderColorPicker('activity')}
           <h3 style={{ margin: '0 0 20px 0', fontSize: '1rem', fontWeight: 900, textAlign: 'center' }}>RECENT ACTIVITY</h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
@@ -150,7 +150,7 @@ const Dashboard: React.FC<DashboardProps> = ({
       <style>{`
         .dashboard-container { max-width: 1000px; margin: 0 auto; animation: pageEnter 0.4s ease; }
         .dashboard-item-card { transition: all 0.3s ease; }
-        .dashboard-item-card:hover { transform: translateY(-4px); box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.15); }
+        .dashboard-item-card:hover { transform: translateY(-4px); box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.25); }
       `}</style>
     </div>
   );

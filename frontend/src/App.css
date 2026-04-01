@@ -1,7 +1,10 @@
 :root {
   --primary: #3b82f6; 
   --primary-rgb: 59, 130, 246;
-  --primary-hover: #2563eb;
+  --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #1e40af 100%);
+  --success-gradient: linear-gradient(135deg, #10b981 0%, #065f46 100%);
+  --danger-gradient: linear-gradient(135deg, #ef4444 0%, #991b1b 100%);
+  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #92400e 100%);
   --radius: 20px;
   --success: #10b981; 
   --danger: #ef4444;
@@ -21,21 +24,23 @@
   --inactive-bg: rgba(255, 255, 255, 0.05);
   --inactive-text: #64748b;
   --subtle-overlay: rgba(255, 255, 255, 0.02);
+  --blueprint-grid: rgba(255, 255, 255, 0.03);
 }
 
 [data-theme='light'] {
-  --bg: #eef6ff; /* Frost Blue Background */
-  --card: #ffffff; /* Crisp White Cards for Contrast */
+  --bg: #eef6ff;
+  --card: #ffffff;
   --text: #0f172a;
   --text-muted: #475569;
-  --border: #bfdbfe; /* Stronger Blue Borders */
+  --border: #bfdbfe; 
   --shadow: 0 10px 30px -5px rgba(59, 130, 246, 0.15);
   --input-bg: #f8faff;
   --accent-glow: rgba(59, 130, 246, 0.1);
   --item-divider: #dbeafe;
   --inactive-bg: #dbeafe; 
   --inactive-text: #1e40af;
-  --subtle-overlay: rgba(59, 130, 246, 0.04); /* Blue-tinted overlay instead of white */
+  --subtle-overlay: rgba(59, 130, 246, 0.04);
+  --blueprint-grid: rgba(59, 130, 246, 0.08);
 }
 
 body {
@@ -81,10 +86,27 @@ body {
   overflow: hidden;
 }
 
+/* Glow Bar Base */
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 4px;
+  background: transparent;
+  z-index: 1;
+}
+
+.glow-primary::before { background: var(--primary-gradient); }
+.glow-success::before { background: var(--success-gradient); }
+.glow-danger::before { background: var(--danger-gradient); }
+.glow-warning::before { background: var(--warning-gradient); }
+
 .card.highlight:hover, .ticker-item:hover, .workflow-item:hover {
   transform: translateY(-2px);
   border-color: var(--primary) !important;
-  box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.2);
+  box-shadow: 0 15px 30px -10px rgba(59, 130, 246, 0.3);
 }
 
 button, .nav-link, .card.highlight {
@@ -135,7 +157,7 @@ input[type=number] { -moz-appearance: textfield; }
 }
 
 button {
-  background: var(--primary);
+  background: var(--primary-gradient);
   color: white;
   border: none;
   padding: 12px 24px;
@@ -144,6 +166,12 @@ button {
   font-size: 0.8rem;
   text-transform: uppercase;
   letter-spacing: 0.1em;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+button:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 6px 16px rgba(59, 130, 246, 0.3);
 }
 
 button:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -155,3 +183,127 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 10px; }
+
+/* --- MOBILE RESPONSIVE SUITE --- */
+@media (max-width: 768px) {
+  .container {
+    padding: 15px;
+    padding-bottom: 100px;
+  }
+
+  .card {
+    padding: 20px !important;
+    border-radius: 16px;
+  }
+
+  h2 { font-size: 1.5rem !important; }
+  h3 { font-size: 1.1rem !important; }
+
+  .currency { font-size: 1.1em; }
+  
+  input, select, button {
+    padding: 14px !important; /* Larger touch targets */
+    font-size: 0.9rem !important;
+  }
+
+  .grid {
+    gap: 15px;
+  }
+
+  /* Prevent horizontal scroll from large numbers */
+  .currency {
+    word-break: break-all;
+    overflow-wrap: break-word;
+  }
+}
+
+/* --- SAPHYR FORGE SPLASH --- */
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+}
+
+.splash-overlay.hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.forge-logo {
+  width: 160px;
+  height: 160px;
+  background: var(--primary-gradient);
+  border-radius: 35px;
+  transform: rotate(45deg);
+  position: relative;
+  box-shadow: 0 0 100px var(--accent-glow);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid rgba(255, 255, 255, 0.4);
+  animation: forgePulse 3s infinite ease-in-out;
+  transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.forge-logo::before {
+  content: 'S';
+  color: white;
+  font-size: 5rem;
+  font-weight: 900;
+  transform: rotate(-45deg);
+  text-shadow: 0 0 30px rgba(0,0,0,0.3);
+  z-index: 2; /* Stay above the shimmer */
+}
+
+.forge-logo::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -150%;
+  width: 60%;
+  height: 200%;
+  background: linear-gradient(
+    to right,
+    rgba(255, 255, 255, 0) 0%,
+    rgba(255, 255, 255, 0.1) 30%,
+    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0.1) 70%,
+    rgba(255, 255, 255, 0) 100%
+  );
+  transform: rotate(25deg);
+  animation: forgeGlint 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
+  z-index: 3; /* Shimmer over the S */
+}
+
+@keyframes forgeGlint {
+  0% { left: -150%; opacity: 0; }
+  10% { opacity: 1; }
+  25% { left: 150%; opacity: 1; }
+  35% { left: 150%; opacity: 0; }
+  100% { left: 150%; opacity: 0; }
+}
+
+@keyframes forgePulse {
+  0% { transform: rotate(45deg) scale(1); box-shadow: 0 0 50px var(--accent-glow); }
+  50% { transform: rotate(45deg) scale(1.05); box-shadow: 0 0 100px var(--accent-glow); }
+  100% { transform: rotate(45deg) scale(1); box-shadow: 0 0 50px var(--accent-glow); }
+}
+
+@keyframes forgeGlint {
+  0% { left: -250%; }
+  30% { left: 150%; }
+  100% { left: 150%; }
+}
+
+@media (max-width: 768px) {
+  .forge-logo { width: 80px; height: 80px; }
+  .forge-logo::before { font-size: 2.5rem; }
+}

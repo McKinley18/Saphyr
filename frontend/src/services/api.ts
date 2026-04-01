@@ -1,10 +1,8 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const getHeaders = () => {
-  const token = localStorage.getItem('saphyr_token');
   return {
-    'Content-Type': 'application/json',
-    ...(token ? { 'Authorization': `Bearer ${token}` } : {})
+    'Content-Type': 'application/json'
   };
 };
 
@@ -13,6 +11,7 @@ export const signup = async (data: any) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -22,6 +21,16 @@ export const login = async (data: any) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include'
+  });
+  return response.json();
+};
+
+export const logout = async () => {
+  const response = await fetch(`${API_URL}/auth/logout`, {
+    method: 'POST',
+    headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -31,6 +40,7 @@ export const verify2FA = async (data: any) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -40,6 +50,7 @@ export const forgotPassword = async (email: string) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email }),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -49,6 +60,7 @@ export const resetPassword = async (data: any) => {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -58,6 +70,7 @@ export const updatePassword = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -66,6 +79,7 @@ export const deleteAccountApi = async () => {
   const response = await fetch(`${API_URL}/auth/delete-account`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -74,12 +88,13 @@ export const resetAccountApi = async () => {
   const response = await fetch(`${API_URL}/auth/reset-account`, {
     method: 'POST',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 export const fetchAccounts = async () => {
-  const response = await fetch(`${API_URL}/accounts`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/accounts`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -88,6 +103,7 @@ export const createAccount = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -97,6 +113,7 @@ export const updateAccount = async (id: string, data: any) => {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -105,12 +122,13 @@ export const deleteAccount = async (id: string) => {
   const response = await fetch(`${API_URL}/accounts/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 export const fetchTransactions = async () => {
-  const response = await fetch(`${API_URL}/transactions`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/transactions`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -119,6 +137,7 @@ export const createTransaction = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -127,17 +146,18 @@ export const deleteTransaction = async (id: string) => {
   const response = await fetch(`${API_URL}/transactions/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 export const fetchTaxEstimate = async () => {
-  const response = await fetch(`${API_URL}/tax/estimate?t=${Date.now()}`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/tax/estimate?t=${Date.now()}`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
 export const fetchTaxProfile = async () => {
-  const response = await fetch(`${API_URL}/tax/profile`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/tax/profile`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -146,6 +166,7 @@ export const updateTaxProfile = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -153,13 +174,14 @@ export const updateTaxProfile = async (data: any) => {
 export const seedTaxBrackets = async () => {
   const response = await fetch(`${API_URL}/tax/seed-brackets`, { 
     method: 'POST',
-    headers: getHeaders() 
+    headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 export const fetchSalaryProfile = async () => {
-  const response = await fetch(`${API_URL}/salary`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/salary`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -168,6 +190,7 @@ export const updateSalaryProfile = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -177,6 +200,7 @@ export const addDeduction = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -185,13 +209,14 @@ export const deleteDeduction = async (id: string) => {
   const response = await fetch(`${API_URL}/salary/deductions/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 // Budget API
 export const fetchBudgets = async () => {
-  const response = await fetch(`${API_URL}/budgets`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/budgets`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -200,6 +225,7 @@ export const createBudget = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -208,13 +234,14 @@ export const deleteBudget = async (id: string) => {
   const response = await fetch(`${API_URL}/budgets/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 // Income Sources API
 export const fetchIncomeSources = async () => {
-  const response = await fetch(`${API_URL}/income-sources`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/income-sources`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -223,6 +250,7 @@ export const createIncomeSource = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -231,13 +259,14 @@ export const deleteIncomeSource = async (id: string) => {
   const response = await fetch(`${API_URL}/income-sources/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };
 
 // Snapshots API
 export const fetchSnapshots = async () => {
-  const response = await fetch(`${API_URL}/snapshots`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/snapshots`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -246,13 +275,14 @@ export const createSnapshot = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
 
 // Savings Goals API
 export const fetchGoals = async () => {
-  const response = await fetch(`${API_URL}/goals`, { headers: getHeaders() });
+  const response = await fetch(`${API_URL}/goals`, { headers: getHeaders(), credentials: 'include' });
   return response.json();
 };
 
@@ -261,6 +291,7 @@ export const createGoal = async (data: any) => {
     method: 'POST',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -270,6 +301,7 @@ export const updateGoal = async (id: string, data: any) => {
     method: 'PUT',
     headers: getHeaders(),
     body: JSON.stringify(data),
+    credentials: 'include'
   });
   return response.json();
 };
@@ -278,6 +310,7 @@ export const deleteGoal = async (id: string) => {
   const response = await fetch(`${API_URL}/goals/${id}`, {
     method: 'DELETE',
     headers: getHeaders(),
+    credentials: 'include'
   });
   return response.json();
 };

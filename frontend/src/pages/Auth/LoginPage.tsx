@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
         setTwoFactorData(data);
         setShow2FA(true);
       } else {
-        login(data.user, data.token);
+        login(data.user);
         navigate('/');
       }
     } catch (err) {
@@ -51,7 +51,7 @@ const LoginPage: React.FC = () => {
       if (data.error) {
         setError(data.error);
       } else {
-        login(data.user, data.token);
+        login(data.user);
         navigate('/');
       }
     } catch (err) {

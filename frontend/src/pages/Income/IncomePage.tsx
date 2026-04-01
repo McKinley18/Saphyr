@@ -10,7 +10,6 @@ import {
   resetAccountApi
 } from '../../services/api';
 import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
 
 interface IncomePageProps {
   userId: string;
@@ -204,7 +203,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
           {/* STEP 1: EARNINGS */}
           <div className={`workflow-step ${activeStep === 1 ? 'focused' : 'collapsed'}`}>
             <div className="step-indicator" onClick={() => setActiveStep(1)} style={{ borderColor: boxColors['step1'] || 'var(--primary)', color: boxColors['step1'] || 'var(--text)' }}>1</div>
-            <section className="card" onClick={() => activeStep !== 1 && setActiveStep(1)} style={{ borderLeft: `5px solid ${boxColors['step1'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <section className="card glow-primary" onClick={() => activeStep !== 1 && setActiveStep(1)} style={{ borderLeft: `5px solid ${boxColors['step1'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step1')}
               <div className="step-header">
                 <h3 className="centered-title">EARNINGS</h3>
@@ -214,8 +213,8 @@ const IncomePage: React.FC<IncomePageProps> = ({
               {activeStep === 1 && (
                 <div className="step-content-expanded">
                   <div className="mode-switcher" style={{ marginBottom: '30px' }}>
-                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: boxColors['step1'] || 'var(--primary)' } : {}}>SALARY</button>
-                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: boxColors['step1'] || 'var(--primary)' } : {}}>HOURLY</button>
+                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: boxColors['step1'] || 'var(--primary-gradient)' } : {}}>SALARY</button>
+                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: boxColors['step1'] || 'var(--primary-gradient)' } : {}}>HOURLY</button>
                   </div>
 
                   <form onSubmit={onSaveProfile} className="workflow-form" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
@@ -232,7 +231,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                       <div className="form-group"><label>Filing Status</label><select value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}><option value="">-- Select --</option><option value="single">Single</option><option value="married_joint">Married Filing Jointly</option><option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option><option value="widow">Qualifying Surviving Spouse</option></select></div>
                       <div className="form-group"><label>Residing State</label><select value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
                     </div>
-                    <button type="submit" className="primary-btn" style={{ background: boxColors['step1'] || 'var(--primary)' }}>SYNC EARNINGS</button>
+                    <button type="submit" className="primary-btn" style={{ background: boxColors['step1'] || 'var(--primary-gradient)' }}>SYNC EARNINGS</button>
                   </form>
                 </div>
               )}
@@ -242,7 +241,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
           {/* STEP 2: DEDUCTIONS */}
           <div className={`workflow-step ${activeStep === 2 ? 'focused' : 'collapsed'}`}>
             <div className="step-indicator" onClick={() => setActiveStep(2)} style={{ borderColor: boxColors['step2'] || 'var(--warning)', color: boxColors['step2'] || 'var(--text)' }}>2</div>
-            <section className="card" onClick={() => activeStep !== 2 && setActiveStep(2)} style={{ borderLeft: `5px solid ${boxColors['step2'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <section className="card glow-warning" onClick={() => activeStep !== 2 && setActiveStep(2)} style={{ borderLeft: `5px solid ${boxColors['step2'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step2')}
               <div className="step-header">
                 <h3 className="centered-title">DEDUCTIONS</h3>
@@ -255,7 +254,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     <label>401k Contribution (%)</label>
                     <div style={{ display: 'flex', gap: '10px' }}>
                       <input type="number" value={pct401k || ''} placeholder="0%" onChange={e => setPct401k(parseFloat(e.target.value) || 0)} style={{ borderColor: boxColors['step2'] || 'var(--border)' }} />
-                      <button type="button" onClick={onSaveProfile} className="warning-btn" style={{ background: boxColors['step2'] || 'var(--warning)' }}>SET</button>
+                      <button type="button" onClick={onSaveProfile} className="warning-btn" style={{ background: boxColors['step2'] || 'var(--warning-gradient)' }}>SET</button>
                     </div>
                   </div>
                   
@@ -285,7 +284,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
           {/* STEP 3: OTHER INCOME */}
           <div className={`workflow-step ${activeStep === 3 ? 'focused' : 'collapsed'}`}>
             <div className="step-indicator" onClick={() => setActiveStep(3)} style={{ borderColor: boxColors['step3'] || 'var(--success)', color: boxColors['step3'] || 'var(--text)' }}>3</div>
-            <section className="card" onClick={() => activeStep !== 3 && setActiveStep(3)} style={{ borderLeft: `5px solid ${boxColors['step3'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <section className="card glow-success" onClick={() => activeStep !== 3 && setActiveStep(3)} style={{ borderLeft: `5px solid ${boxColors['step3'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step3')}
               <div className="step-header">
                 <h3 className="centered-title">OTHER INCOME</h3>
@@ -309,7 +308,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                       <input type="number" placeholder="Amount $" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} style={{ borderColor: boxColors['step3'] || 'var(--border)' }} />
                       <select value={newSource.frequency} onChange={e => setNewSource({...newSource, frequency: e.target.value})} style={{ fontSize: '0.75rem' }}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select>
                     </div>
-                    <button type="submit" className="add-btn-success" style={{ width: '100%', marginTop: '15px', background: boxColors['step3'] || 'var(--success)' }}>ADD SOURCE</button>
+                    <button type="submit" className="add-btn-success" style={{ width: '100%', marginTop: '15px', background: boxColors['step3'] || 'var(--success-gradient)' }}>ADD SOURCE</button>
                   </form>
                 </div>
               )}
@@ -319,7 +318,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
         {/* SUMMARY */}
         <div className="summary-column">
-          <section className={`card sticky-summary-v2 ${isPulsing ? 'pulse-glow' : ''}`}>
+          <section className={`card sticky-summary-v2 glow-primary ${isPulsing ? 'pulse-glow' : ''}`}>
             <div className="summary-header-v2"><label>FINAL ASSESSMENT</label><h3>NET TAKE-HOME</h3></div>
             <div className="summary-details-v2">
               <div className="summary-row-v2"><span className="label">Monthly Gross</span><span className="value currency">${safeFormat(taxEstimate?.annual_salary / 12)}</span></div>
@@ -359,16 +358,16 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
       <style>{`
         .income-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
-        .export-blueprint-btn { width: auto; background: var(--primary); color: white; font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
+        .export-blueprint-btn { width: auto; background: var(--primary-gradient); color: white; font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
         .reset-architect-btn { width: auto; background: none; border: 1px solid var(--danger); color: var(--danger); font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
         
-        .tech-specs-bar { display: flex; gap: 20px; margin-bottom: 30px; background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 15px 25px; overflow-x: auto; scrollbar-width: none; }
+        .tech-specs-bar { display: flex; gap: 20px; margin-bottom: 30px; background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 15px 25px; overflow-x: auto; scrollbar-width: none; border-top: 4px solid var(--primary); }
         .spec-gauge { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--item-divider); text-align: center; }
         .spec-gauge:last-child { border-right: none; }
         .spec-gauge label { font-size: 0.6rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
         .gauge-val { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 900; color: var(--text); }
 
-        .sync-banner { background: var(--success); color: white; padding: 15px; borderRadius: 12px; textAlign: center; fontWeight: 900; fontSize: 0.8rem; letterSpacing: 0.1em; marginBottom: 25px; animation: pageEnter 0.3s ease; }
+        .sync-banner { background: var(--success-gradient); color: white; padding: 15px; borderRadius: 12px; textAlign: center; fontWeight: 900; fontSize: 0.8rem; letterSpacing: 0.1em; marginBottom: 25px; animation: pageEnter 0.3s ease; }
         .income-grid-layout { display: grid; grid-template-columns: 1fr; gap: 40px; width: 100%; box-sizing: border-box; padding-bottom: 100px; }
         @media (min-width: 1024px) { .income-grid-layout { grid-template-columns: minmax(0, 1.8fr) minmax(380px, 1.2fr); align-items: start; } }
 
@@ -419,9 +418,9 @@ const IncomePage: React.FC<IncomePageProps> = ({
         @media (max-width: 1023px) { .summary-column { display: none; } .mobile-summary-footer { display: flex; } .income-page { padding-bottom: 100px; } }
 
         .primary-btn { width: 100%; fontWeight: 900; margin-top: 10px; }
-        .warning-btn { width: auto; background: var(--warning); color: black; font-weight: 900; margin-top: 0; }
+        .warning-btn { width: auto; background: var(--warning-gradient); color: white; font-weight: 900; margin-top: 0; }
         .add-btn { width: auto; background: var(--subtle-overlay); }
-        .add-btn-success { width: auto; background: var(--success); color: black; font-weight: 900; }
+        .add-btn-success { width: auto; background: var(--success-gradient); color: white; font-weight: 900; }
         .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0; width: auto; margin-top: 0; box-shadow: none; }
       `}</style>
     </div>

@@ -16,6 +16,7 @@ const router = Router();
 // Public Auth Routes
 router.post('/auth/signup', AuthController.signup);
 router.post('/auth/login', AuthController.login);
+router.post('/auth/logout', AuthController.logout);
 router.post('/auth/verify-2fa', AuthController.verify2FA);
 router.post('/auth/forgot-password', AuthController.forgotPassword);
 router.post('/auth/reset-password', AuthController.resetPassword);
@@ -29,14 +30,16 @@ router.post('/auth/reset-account', AuthController.resetAccount);
 router.put('/auth/preferences', AuthController.updatePreferences);
 router.delete('/auth/delete-account', AuthController.deleteAccount);
 
-// Account Routes
+// Account Routes (Hardened with RLS)
 router.post('/accounts', AccountController.createAccount);
 router.get('/accounts', AccountController.getAccounts);
 router.get('/accounts/:id', AccountController.getAccountById);
 router.put('/accounts/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await db('accounts').where({ id }).update(req.body);
+    const userId = (req as any).userId;
+    const updatedCount = await db('accounts').where({ id, user_id: userId }).update(req.body);
+    if (updatedCount === 0) return res.status(403).json({ error: 'Unauthorized or not found' });
     res.json({ message: 'Account updated' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -45,7 +48,9 @@ router.put('/accounts/:id', async (req, res) => {
 router.delete('/accounts/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    await db('accounts').where({ id }).del();
+    const userId = (req as any).userId;
+    const deletedCount = await db('accounts').where({ id, user_id: userId }).del();
+    if (deletedCount === 0) return res.status(403).json({ error: 'Unauthorized or not found' });
     res.json({ message: 'Account deleted' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -59,7 +64,8 @@ router.delete('/transactions/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const userId = (req as any).userId;
-    await db('transactions').where({ id, user_id: userId }).del();
+    const deletedCount = await db('transactions').where({ id, user_id: userId }).del();
+    if (deletedCount === 0) return res.status(403).json({ error: 'Unauthorized or not found' });
     res.json({ message: 'Transaction deleted' });
   } catch (error: any) {
     res.status(500).json({ error: error.message });

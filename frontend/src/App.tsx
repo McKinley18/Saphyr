@@ -40,31 +40,13 @@ function AppContent() {
   const [salary, setSalary] = useState({ annual_salary: 0, '401k_percent': 0, filing_status: 'single' });
   const [taxEstimate, setTaxEstimate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [isSplashActive, setIsSplashActive] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [isBlurred, setIsBlurred] = useState(false);
   const [lastFetched, setLastFetched] = useState(0);
   
   const { user, loading: authLoading } = useAuth();
-
-  // Stealth Mode Implementation
-  useEffect(() => {
-    if (!user?.stealth_mode) {
-      setIsBlurred(false);
-      return;
-    }
-
-    const handleBlur = () => setIsBlurred(true);
-    const handleFocus = () => setIsBlurred(false);
-
-    window.addEventListener('blur', handleBlur);
-    window.addEventListener('focus', handleFocus);
-
-    return () => {
-      window.removeEventListener('blur', handleBlur);
-      window.removeEventListener('focus', handleFocus);
-    };
-  }, [user?.stealth_mode]);
 
   // Apply Accent Color
   useEffect(() => {
@@ -85,10 +67,10 @@ function AppContent() {
   const loadData = async (force = false) => {
     if (!user) {
       setLoading(false);
+      setTimeout(() => setIsSplashActive(false), 800);
       return;
     }
 
-    // Limit reloads to once every 5 seconds unless forced
     const now = Date.now();
     if (!force && now - lastFetched < 5000) return;
     
@@ -118,10 +100,10 @@ function AppContent() {
       // Daily Snapshot Capture
       if (accs && accs.length > 0) {
         const totalCash = accs
-          .filter((a: any) => !a.is_bill && (['Checking', 'Savings', 'Cash Accounts'].includes(a.type) || a.group_name === 'Cash Accounts' || parseFloat(a.balance) > 0))
+          .filter((a: any) => !a.is_bill)
           .reduce((sum: number, a: any) => sum + parseFloat(a.balance), 0);
         const totalDebt = accs
-          .filter((a: any) => a.is_bill || ['Credit Card', 'Loan'].includes(a.type) || parseFloat(a.balance) < 0)
+          .filter((a: any) => a.is_bill)
           .reduce((sum: number, a: any) => sum + Math.abs(parseFloat(a.balance)), 0);
         
         await createSnapshot({
@@ -135,6 +117,8 @@ function AppContent() {
       setError(e.message);
     } finally {
       setLoading(false);
+      // Keep splash active for at least 2 seconds for visual impact
+      setTimeout(() => setIsSplashActive(false), 2000);
     }
   };
 
@@ -144,6 +128,7 @@ function AppContent() {
         loadData();
       } else {
         setLoading(false);
+        setTimeout(() => setIsSplashActive(false), 1500);
       }
     }
   }, [user, authLoading]);
@@ -151,147 +136,47 @@ function AppContent() {
   const handleSalarySubmit = async (e: any, filingStatus?: string, extraData?: any) => {
     e.preventDefault();
     try {
-      const response = await updateSalaryProfile({
-        annual_salary: extraData?.annual_salary,
-        contribution_401k_percent: extraData?.contribution_401k_percent,
-        filing_status: filingStatus,
-        is_hourly: extraData?.is_hourly,
-        hourly_rate: extraData?.hourly_rate,
-        hours_per_week: extraData?.hours_per_week,
-        use_manual_tax: extraData?.use_manual_tax,
-        manual_tax_amount: extraData?.manual_tax_amount,
-        state: extraData?.state
-      });
-      
-      if (response.taxEstimate) {
-        setTaxEstimate(response.taxEstimate);
-        setSalary({
-          annual_salary: response.taxEstimate.annual_salary,
-          '401k_percent': response.taxEstimate.input_401k_percent * 100,
-          filing_status: response.taxEstimate.filing_status
-        });
-      }
-      
-      await loadData(true); // Force reload after save
+      const response = await updateSalaryProfile(extraData);
+      await loadData(true);
     } catch (err: any) {
       setError("Failed to update salary: " + err.message);
     }
   };
 
-  if (authLoading || (user && loading)) {
-    return (
-      <div className="container" style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center' }}>
-        <div className="logo-icon" style={{ width: '60px', height: '60px' }}></div>
-      </div>
-    );
-  }
-
-  if (error && user) {
-    return (
-      <div className="container" style={{ padding: '50px' }}>
-        <div className="card" style={{ border: '2px solid var(--danger)', textAlign: 'center' }}>
-          <h2 style={{ color: 'var(--danger)' }}>Connection Error</h2>
-          <p>Unable to synchronize with the Saphyr network.</p>
-          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '10px' }}>{error}</p>
-          <button onClick={() => window.location.reload()} style={{ width: 'auto', marginTop: '20px' }}>RETRY CONNECTION</button>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    <div style={{ 
-      filter: isBlurred ? 'blur(20px)' : 'none', 
-      transition: 'filter 0.3s ease',
-      minHeight: '100vh'
-    }}>
-      <Navbar theme={theme} toggleTheme={toggleTheme} />
-      <div className="container">
-        <Routes>
-          <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
-          <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupPage />} />
-          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-          <Route path="/reset-password" element={<ResetPasswordPage />} />
-          
-          <Route path="/" element={
-            <ProtectedRoute>
-              <Dashboard 
-                taxEstimate={taxEstimate}
-                accounts={accounts}
-                transactions={transactions}
-                incomeSources={incomeSources}
-                snapshots={snapshots}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/income" element={
-            <ProtectedRoute>
-              <IncomePage 
-                userId={user?.id}
-                savedSalary={salary}
-                taxEstimate={taxEstimate}
-                incomeSources={incomeSources}
-                handleSalarySubmit={handleSalarySubmit}
-                loadData={loadData}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/accounts" element={
-            <ProtectedRoute>
-              <AccountsPage 
-                userId={user?.id}
-                accounts={accounts}
-                goals={goals}
-                loadData={loadData}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/bills" element={
-            <ProtectedRoute>
-              <BillsPage 
-                userId={user?.id}
-                accounts={accounts}
-                loadData={loadData}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/transactions" element={
-            <ProtectedRoute>
-              <TransactionsPage 
-                userId={user?.id}
-                accounts={accounts}
-                transactions={transactions}
-                budgets={budgets}
-                taxEstimate={taxEstimate}
-                incomeSources={incomeSources}
-                loadData={loadData}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/trends" element={
-            <ProtectedRoute>
-              <TrendsPage 
-                snapshots={snapshots}
-                transactions={transactions}
-                budgets={budgets}
-              />
-            </ProtectedRoute>
-          } />
-          <Route path="/settings" element={
-            <ProtectedRoute>
-              <SettingsPage />
-            </ProtectedRoute>
-          } />
-        </Routes>
+    <>
+      <div className={`splash-overlay ${!isSplashActive ? 'hidden' : ''}`}>
+        <div className="forge-logo"></div>
       </div>
-      {user && (
-        <QuickLog 
-          accounts={accounts} 
-          budgets={budgets} 
-          onTransactionAdded={loadData} 
-        />
-      )}
-    </div>
+
+      <div style={{ 
+        opacity: isSplashActive ? 0 : 1,
+        transition: 'opacity 1s ease',
+        minHeight: '100vh',
+        visibility: isSplashActive ? 'hidden' : 'visible'
+      }}>
+        <Navbar theme={theme} toggleTheme={toggleTheme} />
+        <div className="container">
+          <Routes>
+            <Route path="/login" element={user ? <Navigate to="/" /> : <LoginPage />} />
+            <Route path="/signup" element={user ? <Navigate to="/" /> : <SignupPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
+            
+            <Route path="/" element={<ProtectedRoute><Dashboard taxEstimate={taxEstimate} accounts={accounts} transactions={transactions} incomeSources={incomeSources} snapshots={snapshots}/></ProtectedRoute>} />
+            <Route path="/income" element={<ProtectedRoute><IncomePage userId={user?.id} savedSalary={salary} taxEstimate={taxEstimate} incomeSources={incomeSources} handleSalarySubmit={handleSalarySubmit} loadData={loadData}/></ProtectedRoute>} />
+            <Route path="/accounts" element={<ProtectedRoute><AccountsPage userId={user?.id} accounts={accounts} goals={goals} loadData={loadData}/></ProtectedRoute>} />
+            <Route path="/bills" element={<ProtectedRoute><BillsPage userId={user?.id} accounts={accounts} loadData={loadData}/></ProtectedRoute>} />
+            <Route path="/transactions" element={<ProtectedRoute><TransactionsPage userId={user?.id} accounts={accounts} transactions={transactions} budgets={budgets} taxEstimate={taxEstimate} incomeSources={incomeSources} loadData={loadData}/></ProtectedRoute>} />
+            <Route path="/trends" element={<ProtectedRoute><TrendsPage snapshots={snapshots} transactions={transactions} budgets={budgets}/></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          </Routes>
+        </div>
+        {user && !isSplashActive && (
+          <QuickLog accounts={accounts} budgets={budgets} onTransactionAdded={loadData} />
+        )}
+      </div>
+    </>
   );
 }
 

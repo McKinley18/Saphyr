@@ -1,9 +1,9 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { logout as apiLogout } from '../services/api';
 
 interface AuthContextType {
   user: any | null;
-  token: string | null;
-  login: (user: any, token: string) => void;
+  login: (user: any) => void;
   logout: () => void;
   loading: boolean;
   isPrivacyMode: boolean;
@@ -17,42 +17,42 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<any | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [isPrivacyMode, setIsPrivacyMode] = useState(
     localStorage.getItem('saphyr_privacy_mode') === 'true'
   );
   const [isEditMode, setIsEditMode] = useState(false);
 
+  // Validate session on mount
   useEffect(() => {
-    const savedUser = localStorage.getItem('saphyr_user');
-    const savedToken = localStorage.getItem('saphyr_token');
-    
-    if (savedUser && savedToken) {
+    const checkSession = async () => {
       try {
-        setUser(JSON.parse(savedUser));
-        setToken(savedToken);
+        const savedUser = localStorage.getItem('saphyr_user');
+        if (savedUser) {
+          setUser(JSON.parse(savedUser));
+        }
       } catch (e) {
-        console.error("Failed to parse saved user", e);
         localStorage.removeItem('saphyr_user');
-        localStorage.removeItem('saphyr_token');
+      } finally {
+        setLoading(false);
       }
-    }
-    setLoading(false);
+    };
+    checkSession();
   }, []);
 
-  const login = (user: any, token: string) => {
-    setUser(user);
-    setToken(token);
-    localStorage.setItem('saphyr_user', JSON.stringify(user));
-    localStorage.setItem('saphyr_token', token);
+  const login = (userData: any) => {
+    setUser(userData);
+    localStorage.setItem('saphyr_user', JSON.stringify(userData));
   };
 
-  const logout = () => {
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } catch (e) {
+      console.error("Logout failed", e);
+    }
     setUser(null);
-    setToken(null);
     localStorage.removeItem('saphyr_user');
-    localStorage.removeItem('saphyr_token');
     window.location.href = '/login';
   };
 
@@ -61,10 +61,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/auth/preferences`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
-        body: JSON.stringify(prefs)
+        body: JSON.stringify(prefs),
+        credentials: 'include'
       });
       const data = await response.json();
       if (data.user) {
@@ -91,11 +91,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }, timeoutMs);
     };
 
-    // Events that reset the timer
     const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
     events.forEach(event => document.addEventListener(event, resetTimer));
 
-    resetTimer(); // Start timer on mount
+    resetTimer();
 
     return () => {
       if (logoutTimer) clearTimeout(logoutTimer);
@@ -117,7 +116,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   return (
     <AuthContext.Provider value={{ 
-      user, token, login, logout, loading, 
+      user, login, logout, loading, 
       isPrivacyMode, togglePrivacyMode,
       isEditMode, toggleEditMode,
       updateUserPreferences
