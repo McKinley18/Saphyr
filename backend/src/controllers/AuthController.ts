@@ -9,8 +9,8 @@ import { AuthRequest } from '../middleware/authMiddleware.js';
 const JWT_SECRET = process.env.JWT_SECRET || 'saphyr-secret-key-2025';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: process.env.NODE_ENV === 'production', // Only send over HTTPS in production
-  sameSite: 'lax' as const,
+  secure: true, // Always true for production cross-domain
+  sameSite: 'none' as const, // Required for cross-domain cookies
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
