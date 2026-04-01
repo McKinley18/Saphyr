@@ -54,7 +54,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
   const accent = customColor || 'var(--primary)';
 
   return (
-    <div className="card" style={{ borderLeft: `5px solid ${accent}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative' }}>
+    <div className="card" style={{ borderTop: `4px solid ${accent}`, borderLeft: `5px solid ${accent}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative' }}>
       {renderColorPicker && renderColorPicker()}
       <h3 style={{ margin: '0 0 25px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', color: 'var(--text)' }}>
         {initialData ? 'EDIT ACCOUNT' : 'ADD CASH ACCOUNT'}
@@ -82,15 +82,18 @@ const AccountForm: React.FC<AccountFormProps> = ({
             </select>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Balance ($)</label>
-            <input 
-              required 
-              type="number" 
-              step="0.01" 
-              value={formData.balance} 
-              onChange={e => setFormData({...formData, balance: e.target.value})} 
-              placeholder="0.00"
-            />
+            <label>Balance</label>
+            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+              <span className="currency-prefix" style={{ color: accent }}>$</span>
+              <input 
+                required 
+                type="number" 
+                step="0.01" 
+                value={formData.balance} 
+                onChange={e => setFormData({...formData, balance: e.target.value})} 
+                placeholder="0.00"
+              />
+            </div>
           </div>
         </div>
 
@@ -108,14 +111,17 @@ const AccountForm: React.FC<AccountFormProps> = ({
             </datalist>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Monthly Inflow ($)</label>
-            <input 
-              type="number" 
-              step="0.01" 
-              value={formData.monthly_deposit} 
-              onChange={e => setFormData({...formData, monthly_deposit: e.target.value})} 
-              placeholder="0.00"
-            />
+            <label>Monthly Inflow</label>
+            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+              <span className="currency-prefix" style={{ color: accent }}>$</span>
+              <input 
+                type="number" 
+                step="0.01" 
+                value={formData.monthly_deposit} 
+                onChange={e => setFormData({...formData, monthly_deposit: e.target.value})} 
+                placeholder="0.00"
+              />
+            </div>
           </div>
         </div>
 

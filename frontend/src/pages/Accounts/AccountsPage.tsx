@@ -78,27 +78,36 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         <p>Your "Virtual Vault" represents your total liquid position. Map savings goals to specific accounts to track progress automatically.</p>
       </UserGuide>
 
-      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)' }}>
-        <div className="spec-gauge" style={{ flex: 1.5, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
-          <label style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em' }}>Total Liquid Capital</label>
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Total</span>
+            <span>Capital</span>
+          </label>
           <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.8rem', fontWeight: 900, marginTop: '2px' }}>${safeFormat(totalCash)}</div>
         </div>
-        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Vaulted Funds</label>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Total</span>
+            <span>Savings</span>
+          </label>
           <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 900, marginTop: '4px' }}>--</div>
         </div>
-        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center' }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Unallocated</label>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0, userSelect: 'none' }}>Empty</span>
+            <span>Unallocated</span>
+          </label>
           <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.1rem', fontWeight: 900, marginTop: '4px' }}>--</div>
         </div>
       </div>
 
       <div className="accounts-grid-layout">
         <div className="workflow-column">
-          <section className="card glow-primary" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
+          <div style={{ position: 'relative', marginBottom: '30px' }}>
             {renderColorPicker('log')}
             <AccountForm onAccountAdded={loadData} userId={userId} groups={accountGroups} customColor={boxColors['log'] || 'var(--primary)'} />
-          </section>
+          </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
             <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>VIRTUAL VAULT</h3>
@@ -106,11 +115,23 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
           </div>
 
           {showAddGoal && (
-            <form onSubmit={handleCreateGoal} className="add-goal-form" style={{ marginBottom: '30px', background: 'var(--subtle-overlay)', borderTop: '4px solid var(--primary)' }}>
+            <form onSubmit={handleCreateGoal} className="add-goal-form" style={{ marginBottom: '30px', background: 'var(--subtle-overlay)', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
               <div className="form-group"><label>Goal Name</label><input required placeholder="e.g. Emergency Fund" value={newGoal.name} onChange={e => setNewGoal({...newGoal, name: e.target.value})} /></div>
               <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                <div className="form-group"><label>Target Amount $</label><input required type="number" placeholder="10000.00" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} /></div>
-                <div className="form-group"><label>Monthly Savings $</label><input required type="number" placeholder="500.00" value={newGoal.monthly} onChange={e => setNewGoal({...newGoal, monthly: e.target.value})} /></div>
+                <div className="form-group">
+                  <label>Target Amount</label>
+                  <div className="currency-input-wrapper">
+                    <span className="currency-prefix">$</span>
+                    <input required type="number" placeholder="10000.00" value={newGoal.target} onChange={e => setNewGoal({...newGoal, target: e.target.value})} />
+                  </div>
+                </div>
+                <div className="form-group">
+                  <label>Monthly Savings</label>
+                  <div className="currency-input-wrapper">
+                    <span className="currency-prefix">$</span>
+                    <input required type="number" placeholder="500.00" value={newGoal.monthly} onChange={e => setNewGoal({...newGoal, monthly: e.target.value})} />
+                  </div>
+                </div>
               </div>
               <div className="form-group"><label>Link to Account</label><select value={newGoal.account_id} onChange={e => setNewGoal({...newGoal, account_id: e.target.value})}><option value="">-- No Link --</option>{cashAccounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}</select></div>
               <button type="submit" className="primary-btn">INITIALIZE GOAL</button>
@@ -122,7 +143,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
               const progress = Math.min(100, (parseFloat(goal.current_amount || '0') / parseFloat(goal.target_amount)) * 100);
               const gColor = boxColors[goal.id] || 'var(--primary)';
               return (
-                <div key={goal.id} className="card glow-primary" style={{ borderTop: `4px solid ${gColor}`, position: 'relative', padding: '25px' }}>
+                <div key={goal.id} className="card" style={{ borderTop: `4px solid ${gColor}`, borderLeft: `5px solid ${gColor}`, position: 'relative', padding: '25px' }}>
                   {renderColorPicker(goal.id)}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-muted)' }}>{goal.name.toUpperCase()}</h4>

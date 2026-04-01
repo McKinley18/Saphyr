@@ -89,11 +89,11 @@
 .logo-icon {
   width: 32px;
   height: 32px;
-  background: var(--primary); /* Use primary color directly for maximum brightness */
+  background: #3b82f6; /* Fixed Electric Blue */
   border-radius: 10px;
   transform: rotate(45deg);
   position: relative;
-  box-shadow: 0 0 15px var(--primary); /* Constant bright glow */
+  box-shadow: 0 0 15px #3b82f6; /* Fixed blue glow */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -132,9 +132,9 @@
 }
 
 @keyframes logoPulse {
-  0% { box-shadow: 0 0 20px var(--primary), 0 0 40px rgba(59, 130, 246, 0.2); }
-  50% { box-shadow: 0 0 40px var(--primary), 0 0 80px rgba(59, 130, 246, 0.4); }
-  100% { box-shadow: 0 0 20px var(--primary), 0 0 40px rgba(59, 130, 246, 0.2); }
+  0% { box-shadow: 0 0 20px #3b82f6, 0 0 40px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 0 40px #3b82f6, 0 0 80px rgba(59, 130, 246, 0.4); }
+  100% { box-shadow: 0 0 20px #3b82f6, 0 0 40px rgba(59, 130, 246, 0.2); }
 }
 
 @keyframes logoGlint {

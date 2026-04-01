@@ -54,16 +54,19 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
         <div className="grid" style={{ gridTemplateColumns: '1fr 1.5fr', gap: '15px' }}>
           <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Amount $</label>
-            <input 
-              required 
-              type="number" 
-              step="0.01" 
-              value={formData.amount} 
-              onChange={e => setFormData({...formData, amount: e.target.value})} 
-              placeholder="0.00"
-              style={{ fontSize: '1.2rem', fontWeight: 900, color: accent, border: `2px solid ${accent}` }}
-            />
+            <label>Amount</label>
+            <div className="currency-input-wrapper" style={{ borderColor: accent }}>
+              <span className="currency-prefix" style={{ color: accent }}>$</span>
+              <input 
+                required 
+                type="number" 
+                step="0.01" 
+                value={formData.amount} 
+                onChange={e => setFormData({...formData, amount: e.target.value})} 
+                placeholder="0.00"
+                style={{ fontSize: '1.2rem', fontWeight: 900, color: accent }}
+              />
+            </div>
           </div>
           <div className="form-group" style={{ marginBottom: 0 }}>
             <label>Category</label>
@@ -103,6 +106,8 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
             type="date" 
             value={formData.date} 
             onChange={e => setFormData({...formData, date: e.target.value})} 
+            onClick={(e) => (e.currentTarget as any).showPicker?.()}
+            style={{ cursor: 'pointer' }}
           />
         </div>
 

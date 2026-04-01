@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { deleteAccount, updateAccount } from '../../services/api';
 import BillForm from '../../components/BillForm/BillForm';
@@ -63,24 +63,47 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
     )
   );
 
+  const nextDue = useMemo(() => {
+    const unpaid = bills.filter(b => !b.is_paid);
+    if (unpaid.length === 0) return '--';
+    
+    const today = new Date().getDate();
+    const thisMonth = unpaid.filter(b => b.due_day >= today).sort((a, b) => a.due_day - b.due_day);
+    const nextMonth = unpaid.filter(b => b.due_day < today).sort((a, b) => a.due_day - b.due_day);
+    
+    const target = thisMonth.length > 0 ? thisMonth[0] : nextMonth[0];
+    const monthName = thisMonth.length > 0 ? new Date().toLocaleString('default', { month: 'short' }) : new Date(new Date().setMonth(new Date().getMonth() + 1)).toLocaleString('default', { month: 'short' });
+    
+    return `${monthName} ${target.due_day}`;
+  }, [bills]);
+
   return (
     <div className="bills-page">
       <UserGuide guideKey="bills_v2" title="Obligation Command Deck">
         <p>Manage your fixed monthly costs. Mark bills as [PAID] to clear them from your current month's liquidity projection.</p>
       </UserGuide>
 
-      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--danger)' }}>
-        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Monthly Burn</label>
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Monthly</span>
+            <span>Bills</span>
+          </label>
           <div className="gauge-val" style={{ color: 'var(--danger)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>${safeFormat(totalMonthlyBills)}</div>
         </div>
-        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)' }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Total Obligations</label>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Total</span>
+            <span>Obligations</span>
+          </label>
           <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>{bills.length}</div>
         </div>
-        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center' }}>
-          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Next Due</label>
-          <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>--</div>
+        <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
+          <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '0.5rem', opacity: 0, userSelect: 'none' }}>Empty</span>
+            <span>Next Due</span>
+          </label>
+          <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: 'JetBrains Mono, monospace', fontSize: '1.4rem', fontWeight: 900, marginTop: '4px' }}>{nextDue}</div>
         </div>
       </div>
 
@@ -92,10 +115,10 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
       {activeTab === 'tracker' ? (
         <div className="accounts-grid-layout">
           <div className="workflow-column">
-            <section className="card glow-danger" style={{ borderLeft: `5px solid ${boxColors['log'] || 'var(--danger)'}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative', marginBottom: '30px' }}>
+            <div style={{ position: 'relative', marginBottom: '30px' }}>
               {renderColorPicker('log')}
-              <BillForm onBillAdded={loadData} userId={userId} groups={billGroups} customColor={boxColors['log'] || 'var(--danger)'} />
-            </section>
+              <BillForm onBillAdded={loadData} userId={userId} groups={billGroups} customColor={boxColors['log'] || 'var(--primary)'} />
+            </div>
 
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '15px' }}>
               <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', color: 'var(--text)' }}>OBLIGATIONS</h3>
@@ -109,7 +132,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
               {bills.map(bill => {
                 const bColor = boxColors[bill.id] || 'var(--primary)';
                 return (
-                  <div key={bill.id} className="card glow-primary" style={{ borderTop: `4px solid ${bColor}`, position: 'relative', padding: '25px', opacity: bill.is_paid ? 0.6 : 1 }}>
+                  <div key={bill.id} className="card" style={{ borderTop: `4px solid ${bColor}`, borderLeft: `5px solid ${bColor}`, position: 'relative', padding: '25px', opacity: bill.is_paid ? 0.6 : 1 }}>
                     {renderColorPicker(bill.id)}
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-muted)' }}>{bill.name.toUpperCase()}</h4>

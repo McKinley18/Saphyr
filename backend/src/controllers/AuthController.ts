@@ -102,7 +102,10 @@ export class AuthController {
       const updatedUser = await db('users').where({ id: user.id }).first();
 
       res.cookie('token', token, COOKIE_OPTIONS);
-      res.json({ user: AuthController.userResponse(updatedUser) });
+      res.json({ 
+        user: AuthController.userResponse(updatedUser),
+        token // Send token to frontend as fallback
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

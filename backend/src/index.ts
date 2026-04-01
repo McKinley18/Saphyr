@@ -11,57 +11,79 @@ dotenv.config();
 const app = express();
 const port = Number(process.env.PORT) || 3001;
 
-// 1. Security Headers (Helmet)
-app.use(helmet());
-
-// 2. Global Rate Limiter (Prevent DDoS)
-const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per window
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: 'Too many requests from this IP, please try again after 15 minutes'
-});
-app.use('/api', limiter);
-
-// 3. Auth Rate Limiter (Brute-force protection)
-const authLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // 10 attempts per hour
-  message: 'Too many login attempts, please try again in an hour'
-});
-app.use('/api/auth/login', authLimiter);
-app.use('/api/auth/signup', authLimiter);
-
-// 4. Restricted CORS
-app.use(cors({
-  origin: [
-    process.env.FRONTEND_URL || 'http://localhost:5173',
-    'https://saphyr-eight.vercel.app'
-  ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
-}));
-
-app.use(express.json());
-app.use(cookieParser());
-
-// Log all requests for auditing
+// 1. Audit Logging (Top-level visibility)
 app.use((req, res, next) => {
   const start = Date.now();
+  console.log(`📡 [${new Date().toISOString()}] ${req.method} ${req.url} - Origin: ${req.headers.origin || 'No Origin'}`);
   res.on('finish', () => {
     const duration = Date.now() - start;
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.url} [${res.statusCode}] - ${duration}ms`);
+    console.log(`✅ [${res.statusCode}] ${req.method} ${req.url} (${duration}ms)`);
   });
   next();
 });
+
+// 2. High-Stability CORS (MUST be before security and rate limiting)
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://saphyr-eight.vercel.app',
+  process.env.FRONTEND_URL
+].filter(Boolean);
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is in our allowed list (supports trailing slashes)
+    const normalizedOrigin = origin.replace(/\/$/, "");
+    const isAllowed = allowedOrigins.some(ao => ao && ao.replace(/\/$/, "") === normalizedOrigin);
+    
+    if (isAllowed) {
+      callback(null, true);
+    } else {
+      console.warn(`🚨 CORS BLOCKED: Origin '${origin}' not in allowed list:`, allowedOrigins);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  optionsSuccessStatus: 200 // Some older browsers/proxies choke on 204
+}));
+
+// 3. Security Headers (Helmet) - Adjusted for Cross-Origin compatibility
+app.use(helmet({
+  crossOriginResourcePolicy: { policy: "cross-origin" }
+}));
+
+// 4. Global Rate Limiter (Prevent DDoS)
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 1000, // Significantly increased to handle high-volume dashboard refreshes
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: (req) => req.method === 'OPTIONS', // EXTREMELY IMPORTANT: Never rate limit preflights
+  message: { error: 'Too many requests, please try again later' }
+});
+app.use('/api', limiter);
+
+app.use(express.json());
+app.use(cookieParser());
 
 // API Routes
 app.use('/api', apiRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok', message: 'Saphyr Private API is running' });
+});
+
+// 5. Global Error Handler (Ensures errors still send CORS headers)
+app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+  console.error('🔥 Server Error:', err);
+  res.status(err.status || 500).json({ 
+    error: err.message || 'Internal Server Error',
+    type: err.name || 'Error'
+  });
 });
 
 // Startup: Ensure default user exists (Safeguard)

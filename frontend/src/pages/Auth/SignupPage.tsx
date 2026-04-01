@@ -12,6 +12,7 @@ const SignupPage: React.FC = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -92,9 +93,18 @@ const SignupPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>Password</label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label>Password</label>
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.65rem', fontWeight: 800, padding: 0, width: 'auto', boxShadow: 'none', cursor: 'pointer', marginTop: 0 }}
+              >
+                [{showPassword ? 'HIDE' : 'SHOW'}]
+              </button>
+            </div>
             <input 
-              type="password" 
+              type={showPassword ? 'text' : 'password'} 
               required 
               value={formData.password} 
               onChange={e => setFormData({...formData, password: e.target.value})} 
@@ -104,7 +114,7 @@ const SignupPage: React.FC = () => {
           <div className="form-group">
             <label>Confirm Password</label>
             <input 
-              type="password" 
+              type={showPassword ? 'text' : 'password'} 
               required 
               value={formData.confirmPassword} 
               onChange={e => setFormData({...formData, confirmPassword: e.target.value})} 

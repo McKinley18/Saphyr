@@ -14,6 +14,7 @@ const SettingsPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   
   const [isPasswordExpanded, setIsPasswordExpanded] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const [isDangerExpanded, setIsDangerExpanded] = useState(false);
   const [is2FAExpanded, setIs2FAExpanded] = useState(false);
   const [isIdentityExpanded, setIsIdentityExpanded] = useState(false);
@@ -239,37 +240,37 @@ const SettingsPage: React.FC = () => {
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', maxWidth: '500px', margin: '0 auto', width: '100%' }}>
-                <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card glow-primary" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>CURRENCY DISPLAY</span>
                   <select value={user?.currency_symbol || '$'} onChange={(e) => updateUserPreferences({ currency_symbol: e.target.value })} style={{ width: 'auto', padding: '8px', fontSize: '0.8rem' }}>
                     <option value="$">USD ($)</option><option value="£">GBP (£)</option><option value="€">EUR (€)</option><option value="¥">JPY (¥)</option>
                   </select>
                 </div>
 
-                <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card glow-primary" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isPrivacyMode ? 'var(--text)' : 'var(--inactive-text)' }}>PRIVACY MODE</span>
                   <button onClick={togglePrivacyMode} style={{ width: 'auto', padding: '8px 16px', background: isPrivacyMode ? 'var(--primary)' : 'var(--inactive-bg)', color: isPrivacyMode ? 'white' : 'var(--inactive-text)', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: '1px solid var(--border)' }}>
                     {isPrivacyMode ? '[ON]' : '[OFF]'}
                   </button>
                 </div>
 
-                <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card glow-primary" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: isEditMode ? 'var(--text)' : 'var(--inactive-text)' }}>EDIT MODE</span>
                   <button onClick={toggleEditMode} style={{ width: 'auto', padding: '8px 16px', background: isEditMode ? 'var(--primary)' : 'var(--inactive-bg)', color: isEditMode ? 'white' : 'var(--inactive-text)', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: '1px solid var(--border)' }}>
                     {isEditMode ? '[ON]' : '[OFF]'}
                   </button>
                 </div>
 
-                <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card glow-primary" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800, color: !hideGuides ? 'var(--text)' : 'var(--inactive-text)' }}>HELP GUIDES</span>
                   <button onClick={toggleGuides} style={{ width: 'auto', padding: '8px 16px', background: !hideGuides ? 'var(--primary)' : 'var(--inactive-bg)', color: !hideGuides ? 'white' : 'var(--inactive-text)', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: '1px solid var(--border)' }}>
                     {!hideGuides ? '[ON]' : '[OFF]'}
                   </button>
                 </div>
 
-                <div className="card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div className="card glow-primary" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', opacity: user?.auto_logout_minutes === 0 ? 0.5 : 1, transition: 'opacity 0.3s ease' }}>
                   <span style={{ fontSize: '0.85rem', fontWeight: 800 }}>AUTO-LOGOUT</span>
-                  <select value={user?.auto_logout_minutes || 30} onChange={(e) => updateUserPreferences({ auto_logout_minutes: parseInt(e.target.value) })} style={{ width: 'auto', padding: '8px', fontSize: '0.8rem' }}>
+                  <select value={user?.auto_logout_minutes ?? 30} onChange={(e) => updateUserPreferences({ auto_logout_minutes: parseInt(e.target.value) })} style={{ width: 'auto', padding: '8px', fontSize: '0.8rem' }}>
                     <option value={2}>2 Minutes</option><option value={5}>5 Minutes</option><option value={10}>10 Minutes</option><option value={15}>15 Minutes</option><option value={30}>30 Minutes</option><option value={0}>OFF</option>
                   </select>
                 </div>
@@ -284,11 +285,11 @@ const SettingsPage: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
               {/* COLLAPSIBLE IDENTITY */}
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="card glow-primary" style={{ padding: 0, overflow: 'hidden' }}>
                 <button onClick={() => setIsIdentityExpanded(!isIdentityExpanded)} style={{ width: '100%', background: 'none', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--text)', marginTop: 0 }}>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>ASSOCIATED IDENTITY</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{user?.email} • {user?.full_name || 'No Username'}</div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{user?.full_name || 'No Username'} • {user?.email}</div>
                   </div>
                   <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{isIdentityExpanded ? '−' : '+'}</span>
                 </button>
@@ -304,7 +305,7 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* COLLAPSIBLE PASSWORD */}
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="card glow-primary" style={{ padding: 0, overflow: 'hidden' }}>
                 <button onClick={() => setIsPasswordExpanded(!isPasswordExpanded)} style={{ width: '100%', background: 'none', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--text)', marginTop: 0 }}>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>UPDATE PASSWORD</span>
                   <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{isPasswordExpanded ? '−' : '+'}</span>
@@ -312,9 +313,21 @@ const SettingsPage: React.FC = () => {
                 {isPasswordExpanded && (
                   <div style={{ padding: '0 20px 25px 20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
                     <form onSubmit={handlePasswordUpdate} style={{ maxWidth: '400px' }}>
-                      <div className="form-group"><label>Current Password</label><input type="password" required value={passwords.current} onChange={e => setPasswords({...passwords, current: e.target.value})} /></div>
-                      <div className="form-group"><label>New Password</label><input type="password" required value={passwords.new} onChange={e => setPasswords({...passwords, new: e.target.value})} /></div>
-                      <div className="form-group"><label>Confirm New</label><input type="password" required value={passwords.confirm} onChange={e => setPasswords({...passwords, confirm: e.target.value})} /></div>
+                      <div className="form-group">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <label>Current Password</label>
+                          <button 
+                            type="button" 
+                            onClick={() => setShowPassword(!showPassword)}
+                            style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.65rem', fontWeight: 800, padding: 0, width: 'auto', boxShadow: 'none', cursor: 'pointer', marginTop: 0 }}
+                          >
+                            [{showPassword ? 'HIDE' : 'SHOW'}]
+                          </button>
+                        </div>
+                        <input type={showPassword ? 'text' : 'password'} required value={passwords.current} onChange={e => setPasswords({...passwords, current: e.target.value})} />
+                      </div>
+                      <div className="form-group"><label>New Password</label><input type={showPassword ? 'text' : 'password'} required value={passwords.new} onChange={e => setPasswords({...passwords, new: e.target.value})} /></div>
+                      <div className="form-group"><label>Confirm New</label><input type={showPassword ? 'text' : 'password'} required value={passwords.confirm} onChange={e => setPasswords({...passwords, confirm: e.target.value})} /></div>
                       <button type="submit" disabled={loading} style={{ width: '100%', background: 'var(--danger)' }}>{loading ? 'SYNCING...' : 'CONFIRM CHANGE'}</button>
                     </form>
                   </div>
@@ -322,9 +335,9 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* COLLAPSIBLE 2FA */}
-              <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+              <div className="card glow-primary" style={{ padding: 0, overflow: 'hidden' }}>
                 <button onClick={() => setIs2FAExpanded(!is2FAExpanded)} style={{ width: '100%', background: 'none', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--text)', marginTop: 0 }}>
-                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>TWO-FACTOR AUTHENTICATION (2FA)</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>TWO-FACTOR AUTHENTICATION</span>
                   <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{is2FAExpanded ? '−' : '+'}</span>
                 </button>
                 {is2FAExpanded && (
@@ -343,8 +356,8 @@ const SettingsPage: React.FC = () => {
               </div>
 
               {/* COLLAPSIBLE DELETE ACCOUNT */}
-              <div className="card" style={{ padding: 0, overflow: 'hidden', border: '2px solid rgba(244, 63, 94, 0.3)' }}>
-                <button onClick={() => setIsDangerExpanded(!isDangerExpanded)} style={{ width: '100%', background: 'rgba(244, 63, 94, 0.03)', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--danger)', marginTop: 0 }}>
+              <div className="card glow-danger" style={{ padding: 0, overflow: 'hidden' }}>
+                <button onClick={() => setIsDangerExpanded(!isDangerExpanded)} style={{ width: '100%', background: 'none', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--danger)', marginTop: 0 }}>
                   <span style={{ fontWeight: 800, fontSize: '0.9rem' }}>DELETE ACCOUNT</span>
                   <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{isDangerExpanded ? '−' : '+'}</span>
                 </button>
@@ -365,11 +378,11 @@ const SettingsPage: React.FC = () => {
           <section id="data">
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '25px', borderBottom: '2px solid var(--success)', paddingBottom: '10px', textAlign: 'center' }}>DATA MANAGEMENT</h2>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div className="card highlight-hover" onClick={handleExportCSV} style={{ cursor: 'pointer', textAlign: 'center', background: 'rgba(255,255,255,0.01)', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <div className="card glow-success highlight-hover" onClick={handleExportCSV} style={{ cursor: 'pointer', textAlign: 'center', background: 'rgba(255,255,255,0.01)', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '5px' }}>CSV EXPORT</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Raw Transaction Logs</div>
               </div>
-              <div className="card highlight-hover" onClick={handleExportPDF} style={{ cursor: 'pointer', textAlign: 'center', background: 'rgba(255,255,255,0.01)', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
+              <div className="card glow-success highlight-hover" onClick={handleExportPDF} style={{ cursor: 'pointer', textAlign: 'center', background: 'rgba(255,255,255,0.01)', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '5px' }}>OFFICIAL STATEMENT</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Professional PDF Summary</div>
               </div>

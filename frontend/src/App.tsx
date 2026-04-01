@@ -44,7 +44,7 @@ function AppContent() {
   const [error, setError] = useState<string | null>(null);
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [lastFetched, setLastFetched] = useState(0);
-  const [retryCount, setRetryCount] = useState(0);
+  const [_retryCount, setRetryCount] = useState(0);
 
   const { user, loading: authLoading, logout } = useAuth();
   

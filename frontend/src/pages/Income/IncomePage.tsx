@@ -76,6 +76,18 @@ const IncomePage: React.FC<IncomePageProps> = ({
     if (savedSalary) {
       setIsHourly(savedSalary.is_hourly || false);
       setUseManualTax(savedSalary.use_manual_tax || false);
+      
+      // Auto-populate form fields from saved data
+      if (savedSalary.is_hourly) {
+        setHourlyRate(savedSalary.hourly_rate || 0);
+        setHoursPerWeek(savedSalary.hours_per_week || 0);
+      } else {
+        setAnnualGross(savedSalary.annual_salary || 0);
+      }
+      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
+      setManualTaxAmount(savedSalary.manual_tax_amount || 0);
+      setLocalFilingStatus(savedSalary.filing_status || '');
+      setLocalState(savedSalary.state || '');
     }
   }, [savedSalary]);
 
@@ -100,17 +112,17 @@ const IncomePage: React.FC<IncomePageProps> = ({
     }
     const payload = {
       is_hourly: isHourly,
-      hourly_rate: Number(hourlyRate) || savedSalary?.hourly_rate,
-      hours_per_week: Number(hoursPerWeek) || savedSalary?.hours_per_week,
-      annual_salary: annualGross > 0 ? Number(annualGross) : (isHourly && hourlyRate > 0 ? (Number(hourlyRate) * (Number(hoursPerWeek) || 40) * 52) : savedSalary?.annual_salary),
-      contribution_401k_percent: pct401k > 0 ? (Number(pct401k) / 100) : (savedSalary?.['401k_percent'] / 100),
+      hourly_rate: isHourly ? (Number(hourlyRate) || savedSalary?.hourly_rate) : 0,
+      hours_per_week: isHourly ? (Number(hoursPerWeek) || savedSalary?.hours_per_week) : 0,
+      annual_salary: !isHourly ? (Number(annualGross) || savedSalary?.annual_salary) : (Number(hourlyRate) * (Number(hoursPerWeek) || 40) * 52),
+      contribution_401k_percent: Number(pct401k) / 100,
       use_manual_tax: useManualTax,
       manual_tax_amount: Number(manualTaxAmount) || savedSalary?.manual_tax_amount,
-      state: localState
+      state: localState,
+      filing_status: localFilingStatus
     };
     handleSalarySubmit(e, localFilingStatus, payload);
     setSyncMessage('CHANGES SYNCHRONIZED');
-    setAnnualGross(0); setHourlyRate(0); setHoursPerWeek(0); setManualTaxAmount(0); setPct401k(0); setLocalFilingStatus(''); setLocalState('');
     setActiveStep(2); 
     setTimeout(() => setSyncMessage(''), 3000);
   };
@@ -182,15 +194,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
       <div className="tech-specs-bar">
         <div className="spec-gauge">
-          <label>Monthly Base</label>
+          <label>Monthly</label>
           <div className="gauge-val">${safeFormat(taxEstimate?.annual_salary / 12)}</div>
         </div>
         <div className="spec-gauge">
-          <label>Derived Hourly</label>
+          <label>Hourly</label>
           <div className="gauge-val">${safeFormat(taxEstimate?.hourly_rate)}</div>
         </div>
         <div className="spec-gauge">
-          <label>Tax Bracket</label>
+          <label>Tax Rate</label>
           <div className="gauge-val">{((taxEstimate?.effective_rate || 0) * 100).toFixed(1)}%</div>
         </div>
       </div>
@@ -202,36 +214,50 @@ const IncomePage: React.FC<IncomePageProps> = ({
         <div className="workflow-column">
           {/* STEP 1: EARNINGS */}
           <div className={`workflow-step ${activeStep === 1 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(1)} style={{ borderColor: boxColors['step1'] || 'var(--primary)', color: boxColors['step1'] || 'var(--text)' }}>1</div>
-            <section className="card glow-primary" onClick={() => activeStep !== 1 && setActiveStep(1)} style={{ borderLeft: `5px solid ${boxColors['step1'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <div className="step-indicator" onClick={() => setActiveStep(1)} style={{ borderColor: 'var(--primary)', color: 'var(--text)' }}>1</div>
+            <section className="card" onClick={() => activeStep !== 1 && setActiveStep(1)} style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step1')}
               <div className="step-header">
-                <h3 className="centered-title">EARNINGS</h3>
-                {activeStep !== 1 && <span className="step-summary-label" style={{ color: boxColors['step1'] || 'var(--primary)' }}>${safeFormat(taxEstimate?.annual_salary)}/yr</span>}
+                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                  <span>EARNINGS:</span>
+                  <span style={{ color: 'var(--primary)' }}>${safeFormat(taxEstimate?.annual_salary)}/YR</span>
+                </h3>
               </div>
               
               {activeStep === 1 && (
                 <div className="step-content-expanded">
                   <div className="mode-switcher" style={{ marginBottom: '30px' }}>
-                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: boxColors['step1'] || 'var(--primary-gradient)' } : {}}>SALARY</button>
-                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: boxColors['step1'] || 'var(--primary-gradient)' } : {}}>HOURLY</button>
+                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: 'var(--primary-gradient)' } : {}}>SALARY</button>
+                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: 'var(--primary-gradient)' } : {}}>HOURLY</button>
                   </div>
 
                   <form onSubmit={onSaveProfile} className="workflow-form" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
                     {isHourly ? (
                       <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div className="form-group"><label>Hourly Rate ($)</label><input type="number" step="0.01" value={hourlyRate || ''} placeholder="0.00" onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} style={{ borderColor: boxColors['step1'] || 'var(--border)' }} /></div>
+                        <div className="form-group">
+                          <label>Hourly Rate</label>
+                          <div className="currency-input-wrapper" style={{ borderColor: boxColors['step1'] || 'var(--border)' }}>
+                            <span className="currency-prefix" style={{ color: boxColors['step1'] || 'var(--primary)' }}>$</span>
+                            <input type="number" step="0.01" value={hourlyRate || ''} placeholder="0.00" onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} />
+                          </div>
+                        </div>
                         <div className="form-group"><label>Hours / Week</label><input type="number" value={hoursPerWeek || ''} placeholder="40" onChange={e => setHoursPerWeek(parseInt(e.target.value) || 0)} style={{ borderColor: boxColors['step1'] || 'var(--border)' }} /></div>
                       </div>
                     ) : (
-                      <div className="form-group"><label>Annual Gross Salary ($)</label><input type="number" value={annualGross || ''} placeholder="0.00" onChange={e => setAnnualGross(parseFloat(e.target.value) || 0)} style={{ borderColor: boxColors['step1'] || 'var(--border)' }} /></div>
+                      <div className="form-group">
+                        <label>Annual Gross Salary</label>
+                        <div className="currency-input-wrapper" style={{ borderColor: boxColors['step1'] || 'var(--border)' }}>
+                          <span className="currency-prefix" style={{ color: boxColors['step1'] || 'var(--primary)' }}>$</span>
+                          <input type="number" value={annualGross || ''} placeholder="0.00" onChange={e => setAnnualGross(parseFloat(e.target.value) || 0)} />
+                        </div>
+                      </div>
                     )}
 
-                    <div className="grid" style={{ gridTemplateColumns: '1.5fr 1fr', gap: '20px' }}>
-                      <div className="form-group"><label>Filing Status</label><select value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}><option value="">-- Select --</option><option value="single">Single</option><option value="married_joint">Married Filing Jointly</option><option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option><option value="widow">Qualifying Surviving Spouse</option></select></div>
-                      <div className="form-group"><label>Residing State</label><select value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
+                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                      <div className="form-group" style={{ marginBottom: 0 }}><label>Filing Status</label><select value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}><option value="">-- Select --</option><option value="single">Single</option><option value="married_joint">Married Filing Jointly</option><option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option><option value="widow">Qualifying Surviving Spouse</option></select></div>
+                      <div className="form-group" style={{ marginBottom: 0 }}><label>Residing State</label><select value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
                     </div>
-                    <button type="submit" className="primary-btn" style={{ background: boxColors['step1'] || 'var(--primary-gradient)' }}>SYNC EARNINGS</button>
+                    <button type="submit" className="primary-btn">SYNC EARNINGS</button>
                   </form>
                 </div>
               )}
@@ -240,12 +266,14 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
           {/* STEP 2: DEDUCTIONS */}
           <div className={`workflow-step ${activeStep === 2 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(2)} style={{ borderColor: boxColors['step2'] || 'var(--warning)', color: boxColors['step2'] || 'var(--text)' }}>2</div>
-            <section className="card glow-warning" onClick={() => activeStep !== 2 && setActiveStep(2)} style={{ borderLeft: `5px solid ${boxColors['step2'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <div className="step-indicator" onClick={() => setActiveStep(2)} style={{ borderColor: 'var(--warning)', color: 'var(--text)' }}>2</div>
+            <section className="card" onClick={() => activeStep !== 2 && setActiveStep(2)} style={{ borderTop: '4px solid var(--warning)', borderLeft: '5px solid var(--warning)', background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step2')}
               <div className="step-header">
-                <h3 className="centered-title">DEDUCTIONS</h3>
-                {activeStep !== 2 && <span className="step-summary-label" style={{ color: boxColors['step2'] || 'var(--primary)' }}>-{safeFormat((taxEstimate?.deduction_401k + taxEstimate?.total_pre_tax_deductions) / 12)}/mo</span>}
+                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                  <span>DEDUCTIONS:</span>
+                  <span style={{ color: 'var(--warning)' }}>-${safeFormat((taxEstimate?.deduction_401k + taxEstimate?.total_pre_tax_deductions) / 12)}/MO</span>
+                </h3>
               </div>
               
               {activeStep === 2 && (
@@ -253,8 +281,8 @@ const IncomePage: React.FC<IncomePageProps> = ({
                   <div className="form-group" style={{ marginBottom: '30px' }}>
                     <label>401k Contribution (%)</label>
                     <div style={{ display: 'flex', gap: '10px' }}>
-                      <input type="number" value={pct401k || ''} placeholder="0%" onChange={e => setPct401k(parseFloat(e.target.value) || 0)} style={{ borderColor: boxColors['step2'] || 'var(--border)' }} />
-                      <button type="button" onClick={onSaveProfile} className="warning-btn" style={{ background: boxColors['step2'] || 'var(--warning-gradient)' }}>SET</button>
+                      <input type="number" value={pct401k || ''} placeholder="0%" onChange={e => setPct401k(parseFloat(e.target.value) || 0)} style={{ borderColor: 'var(--border)' }} />
+                      <button type="button" onClick={onSaveProfile} className="warning-btn" style={{ background: 'var(--warning-gradient)' }}>SET</button>
                     </div>
                   </div>
                   
@@ -263,18 +291,21 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     {(savedSalary?.custom_deductions || []).map((d: any) => (
                       <div key={d.id} className="workflow-item">
                         <div><span>{d.name}</span><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{d.frequency}</div></div>
-                        <div className="item-right"><span className="negative">-${safeFormat(d.amount)}</span><button type="button" onClick={async () => { await deleteDeduction(d.id); loadData(); }} className="remove-btn">&times;</button></div>
+                        <div className="item-right"><span className="negative" style={{ color: 'var(--warning)' }}>-${safeFormat(d.amount)}</span><button type="button" onClick={async () => { await deleteDeduction(d.id); loadData(); }} className="remove-btn">&times;</button></div>
                       </div>
                     ))}
                   </div>
 
                   <form onSubmit={onAddDeduction} className="add-item-form">
-                    <div className="form-group"><label style={{ fontSize: '0.65rem' }}>New Pre-Tax (Health, HSA)</label><input placeholder="Obligation Name" value={newDeduction.name} onChange={e => setNewDeduction({...newDeduction, name: e.target.value})} style={{ borderColor: boxColors['step2'] || 'var(--border)' }} /></div>
+                    <div className="form-group"><label style={{ fontSize: '0.65rem' }}>New Pre-Tax (Health, HSA)</label><input placeholder="Obligation Name" value={newDeduction.name} onChange={e => setNewDeduction({...newDeduction, name: e.target.value})} style={{ borderColor: 'var(--border)' }} /></div>
                     <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
-                      <input type="number" placeholder="Amount $" value={newDeduction.amount} onChange={e => setNewDeduction({...newDeduction, amount: e.target.value})} style={{ borderColor: boxColors['step2'] || 'var(--border)' }} />
+                      <div className="currency-input-wrapper" style={{ borderColor: 'var(--border)' }}>
+                        <span className="currency-prefix" style={{ color: 'var(--warning)' }}>$</span>
+                        <input type="number" placeholder="0.00" value={newDeduction.amount} onChange={e => setNewDeduction({...newDeduction, amount: e.target.value})} />
+                      </div>
                       <select value={newDeduction.frequency} onChange={e => setNewDeduction({...newDeduction, frequency: e.target.value})} style={{ fontSize: '0.75rem' }}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select>
                     </div>
-                    <button type="submit" className="add-btn" style={{ width: '100%', marginTop: '15px', background: boxColors['step2'] || 'var(--subtle-overlay)' }}>ADD DEDUCTION</button>
+                    <button type="submit" className="add-btn" style={{ width: '100%', marginTop: '15px', background: 'var(--subtle-overlay)', border: '1px solid var(--warning)', color: 'var(--warning)' }}>ADD DEDUCTION</button>
                   </form>
                 </div>
               )}
@@ -283,12 +314,14 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
           {/* STEP 3: OTHER INCOME */}
           <div className={`workflow-step ${activeStep === 3 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(3)} style={{ borderColor: boxColors['step3'] || 'var(--success)', color: boxColors['step3'] || 'var(--text)' }}>3</div>
-            <section className="card glow-success" onClick={() => activeStep !== 3 && setActiveStep(3)} style={{ borderLeft: `5px solid ${boxColors['step3'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', position: 'relative' }}>
+            <div className="step-indicator" onClick={() => setActiveStep(3)} style={{ borderColor: 'var(--success)', color: 'var(--text)' }}>3</div>
+            <section className="card" onClick={() => activeStep !== 3 && setActiveStep(3)} style={{ borderTop: '4px solid var(--success)', borderLeft: '5px solid var(--success)', background: 'var(--subtle-overlay)', position: 'relative' }}>
               {renderColorPicker('step3')}
               <div className="step-header">
-                <h3 className="centered-title">OTHER INCOME</h3>
-                {activeStep !== 3 && <span className="step-summary-label" style={{ color: boxColors['step3'] || 'var(--primary)' }}>+${safeFormat(totalOtherIncome)}/mo</span>}
+                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
+                  <span>OTHER INCOME:</span>
+                  <span style={{ color: 'var(--success)' }}>+${safeFormat(totalOtherIncome)}/MO</span>
+                </h3>
               </div>
               
               {activeStep === 3 && (
@@ -298,17 +331,20 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     {(incomeSources || []).map(src => (
                       <div key={src.id} className="workflow-item">
                         <div><span>{src.name} {src.is_taxed && <small className="taxed-label">(Taxed)</small>}</span><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{src.frequency}</div></div>
-                        <div className="item-right"><span className="positive">+${safeFormat(src.amount)}</span><button type="button" onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} className="remove-btn">&times;</button></div>
+                        <div className="item-right"><span className="positive" style={{ color: 'var(--success)' }}>+${safeFormat(src.amount)}</span><button type="button" onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} className="remove-btn">&times;</button></div>
                       </div>
                     ))}
                   </div>
                   <form onSubmit={onAddSource} className="add-item-form success">
-                    <input placeholder="Source Name" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} style={{ marginBottom: '15px', borderColor: boxColors['step3'] || 'var(--border)' }} />
+                    <input placeholder="Source Name" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} style={{ marginBottom: '15px', borderColor: 'var(--border)' }} />
                     <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <input type="number" placeholder="Amount $" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} style={{ borderColor: boxColors['step3'] || 'var(--border)' }} />
+                      <div className="currency-input-wrapper" style={{ borderColor: 'var(--border)' }}>
+                        <span className="currency-prefix" style={{ color: 'var(--success)' }}>$</span>
+                        <input type="number" placeholder="0.00" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} />
+                      </div>
                       <select value={newSource.frequency} onChange={e => setNewSource({...newSource, frequency: e.target.value})} style={{ fontSize: '0.75rem' }}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select>
                     </div>
-                    <button type="submit" className="add-btn-success" style={{ width: '100%', marginTop: '15px', background: boxColors['step3'] || 'var(--success-gradient)' }}>ADD SOURCE</button>
+                    <button type="submit" className="add-btn-success" style={{ width: '100%', marginTop: '15px', background: 'var(--success-gradient)' }}>ADD SOURCE</button>
                   </form>
                 </div>
               )}
@@ -318,7 +354,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
         {/* SUMMARY */}
         <div className="summary-column">
-          <section className={`card sticky-summary-v2 glow-primary ${isPulsing ? 'pulse-glow' : ''}`}>
+          <section className={`card sticky-summary-v2 ${isPulsing ? 'pulse-glow' : ''}`} style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
             <div className="summary-header-v2"><label>FINAL ASSESSMENT</label><h3>NET TAKE-HOME</h3></div>
             <div className="summary-details-v2">
               <div className="summary-row-v2"><span className="label">Monthly Gross</span><span className="value currency">${safeFormat(taxEstimate?.annual_salary / 12)}</span></div>
@@ -327,7 +363,13 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <div className="tax-module-v2">
                 <div className="tax-header-v2"><span className="label negative">COMBINED TAXES</span><button type="button" onClick={() => { setUseManualTax(!useManualTax); onSaveProfile(new Event('submit') as any); }} className="override-btn-v2">{useManualTax ? 'MANUAL' : 'AUTO'}</button></div>
                 {useManualTax ? (
-                  <div className="manual-tax-input-v2"><input type="number" value={manualTaxAmount || ''} placeholder="0.00" onChange={e => setManualTaxAmount(parseFloat(e.target.value) || 0)} /><button type="button" onClick={onSaveProfile}>OK</button></div>
+                  <div className="manual-tax-input-v2">
+                    <div className="currency-input-wrapper" style={{ border: 'none', background: 'rgba(255,255,255,0.05)' }}>
+                      <span className="currency-prefix" style={{ color: 'var(--danger)', paddingLeft: '10px' }}>$</span>
+                      <input type="number" value={manualTaxAmount || ''} placeholder="0.00" onChange={e => setManualTaxAmount(parseFloat(e.target.value) || 0)} style={{ fontSize: '0.8rem', padding: '8px' }} />
+                    </div>
+                    <button type="button" onClick={onSaveProfile}>OK</button>
+                  </div>
                 ) : (
                   <div className="tax-breakdown-v2"><div className="tax-main-v2 negative">-${safeFormat((taxEstimate?.estimated_tax + taxEstimate?.state_tax) / 12)}</div><div className="tax-sub-v2">Fed: -${safeFormat(taxEstimate?.estimated_tax / 12)} • State ({taxEstimate?.state}): -${safeFormat(taxEstimate?.state_tax / 12)}</div></div>
                 )}
@@ -361,8 +403,9 @@ const IncomePage: React.FC<IncomePageProps> = ({
         .export-blueprint-btn { width: auto; background: var(--primary-gradient); color: white; font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
         .reset-architect-btn { width: auto; background: none; border: 1px solid var(--danger); color: var(--danger); font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
         
-        .tech-specs-bar { display: flex; gap: 20px; margin-bottom: 30px; background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 15px 25px; overflow-x: auto; scrollbar-width: none; border-top: 4px solid var(--primary); }
-        .spec-gauge { flex: 1; min-width: 120px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--item-divider); text-align: center; }
+        .tech-specs-bar { display: flex; gap: 10px; margin-bottom: 30px; background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 15px 15px; overflow-x: auto; scrollbar-width: none; border-top: 4px solid var(--primary); border-left: 5px solid var(--primary); }
+        .spec-gauge { flex: 1; min-width: 80px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--item-divider); text-align: center; }
+        @media (max-width: 480px) { .tech-specs-bar { gap: 5px; padding: 10px 10px; } .spec-gauge { min-width: 70px; } .gauge-val { font-size: 0.95rem; } }
         .spec-gauge:last-child { border-right: none; }
         .spec-gauge label { font-size: 0.6rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
         .gauge-val { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 900; color: var(--text); }
@@ -375,6 +418,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
         .workflow-column::before { content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: var(--border); z-index: 0; opacity: 0.3; }
         
         .workflow-step { position: relative; padding-left: 60px; z-index: 1; width: 100%; box-sizing: border-box; transition: all 0.4s ease; }
+        @media (max-width: 480px) { .workflow-step { padding-left: 45px; } .centered-title { font-size: 0.95rem; } }
         .workflow-step.collapsed { opacity: 0.7; }
         .workflow-step.collapsed section { cursor: pointer; padding: 15px 25px; }
         .step-indicator { position: absolute; left: 0; top: 15px; width: 40px; height: 40px; border-radius: 50%; background: var(--bg); border: 2px solid var(--primary); color: var(--text); display: flex; align-items: center; justify-content: center; fontWeight: 900; font-size: 1.1rem; box-shadow: 0 0 15px var(--accent-glow); flex-shrink: 0; cursor: pointer; transition: all 0.3s ease; }

@@ -11,6 +11,7 @@ const LoginPage: React.FC = () => {
   const [twoFactorData, setTwoFactorData] = useState<any>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
@@ -119,11 +120,20 @@ const LoginPage: React.FC = () => {
             </div>
             <div className="form-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <label>Password</label>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label>Password</label>
+                  <button 
+                    type="button" 
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary)', fontSize: '0.65rem', fontWeight: 800, padding: 0, width: 'auto', boxShadow: 'none', cursor: 'pointer', marginTop: 0 }}
+                  >
+                    [{showPassword ? 'HIDE' : 'SHOW'}]
+                  </button>
+                </div>
                 <Link to="/forgot-password" style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 600, textDecoration: 'none' }}>Forgot?</Link>
               </div>
               <input 
-                type="password" 
+                type={showPassword ? 'text' : 'password'} 
                 required 
                 value={password} 
                 onChange={e => setPassword(e.target.value)} 

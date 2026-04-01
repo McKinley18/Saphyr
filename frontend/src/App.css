@@ -63,6 +63,38 @@ body {
   animation: pageEnter 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* Currency Input Styling */
+.currency-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--input-bg);
+  border: 2px solid var(--border);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.currency-input-wrapper:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px var(--accent-glow);
+}
+
+.currency-prefix {
+  padding-left: 16px;
+  font-weight: 900;
+  color: var(--text-muted);
+  font-family: 'JetBrains Mono', monospace;
+  pointer-events: none;
+}
+
+.currency-input-wrapper input {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding-left: 8px !important;
+}
+
 @keyframes pageEnter {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -87,21 +119,32 @@ body {
 }
 
 /* Glow Bar Base */
-.card::before {
+.card::before, .card::after {
   content: '';
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 4px;
   background: transparent;
   z-index: 1;
 }
 
-.glow-primary::before { background: var(--primary-gradient); }
-.glow-success::before { background: var(--success-gradient); }
-.glow-danger::before { background: var(--danger-gradient); }
-.glow-warning::before { background: var(--warning-gradient); }
+/* Top Glow Bar */
+.card::before {
+  right: 0;
+  height: 4px;
+}
+
+/* Left Glow Bar */
+.card::after {
+  bottom: 0;
+  width: 5px;
+}
+
+.glow-primary::before, .glow-primary::after { background: var(--primary-gradient); }
+.glow-success::before, .glow-success::after { background: var(--success-gradient); }
+.glow-danger::before, .glow-danger::after { background: var(--danger-gradient); }
+.glow-warning::before, .glow-warning::after { background: var(--warning-gradient); }
+.glow-saphyr::before, .glow-saphyr::after { background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); }
 
 .card.highlight:hover, .ticker-item:hover, .workflow-item:hover {
   transform: translateY(-2px);
@@ -236,18 +279,24 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .forge-logo {
-  width: 160px;
-  height: 160px;
+  width: 420px;
+  height: 420px;
   background: var(--primary-gradient);
-  border-radius: 35px;
+  border-radius: 80px;
   transform: rotate(45deg);
   position: relative;
-  box-shadow: 0 0 100px var(--accent-glow);
+  /* Immense radiant multi-layer glow */
+  box-shadow: 
+    0 0 80px var(--accent-glow),
+    0 0 160px var(--accent-glow),
+    0 0 240px rgba(59, 130, 246, 0.6);
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 3px solid rgba(255, 255, 255, 0.4);
-  animation: forgePulse 3s infinite ease-in-out;
+  border: 6px solid rgba(255, 255, 255, 0.8);
+  /* Entrance sequence followed by a constant radiant glow */
+  animation: 
+    forgeEntrance 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
   transition: all 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
 }
@@ -255,11 +304,13 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 .forge-logo::before {
   content: 'S';
   color: white;
-  font-size: 5rem;
+  font-size: 15rem;
   font-weight: 900;
-  transform: rotate(-45deg);
-  text-shadow: 0 0 30px rgba(0,0,0,0.3);
-  z-index: 2; /* Stay above the shimmer */
+  transform: rotate(-45deg); /* Target rotation */
+  text-shadow: 0 0 60px rgba(0,0,0,0.6);
+  z-index: 2;
+  /* Spin S into position independently */
+  animation: sRotateIn 1.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
 }
 
 .forge-logo::after {
@@ -267,43 +318,43 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   position: absolute;
   top: -50%;
   left: -150%;
-  width: 60%;
+  width: 100%; /* Wider glint for bigger logo */
   height: 200%;
   background: linear-gradient(
     to right,
     rgba(255, 255, 255, 0) 0%,
     rgba(255, 255, 255, 0.1) 30%,
-    rgba(255, 255, 255, 0.9) 50%,
+    rgba(255, 255, 255, 0.95) 50%,
     rgba(255, 255, 255, 0.1) 70%,
     rgba(255, 255, 255, 0) 100%
   );
   transform: rotate(25deg);
-  animation: forgeGlint 4s infinite cubic-bezier(0.4, 0, 0.2, 1);
+  /* Glint triggers after the S settles */
+  animation: forgeGlint 4s infinite cubic-bezier(0.4, 0, 0.2, 1) 1.2s;
   pointer-events: none;
-  z-index: 3; /* Shimmer over the S */
+  z-index: 3;
+}
+
+@keyframes forgeEntrance {
+  0% { transform: rotate(0deg) scale(0.3); opacity: 0; }
+  100% { transform: rotate(45deg) scale(1); opacity: 1; }
+}
+
+@keyframes sRotateIn {
+  0% { transform: rotate(-225deg) scale(0); opacity: 0; }
+  60% { transform: rotate(-45deg) scale(1.1); opacity: 1; }
+  100% { transform: rotate(-45deg) scale(1); opacity: 1; }
 }
 
 @keyframes forgeGlint {
   0% { left: -150%; opacity: 0; }
-  10% { opacity: 1; }
+  5% { opacity: 1; }
   25% { left: 150%; opacity: 1; }
-  35% { left: 150%; opacity: 0; }
+  30% { left: 150%; opacity: 0; }
   100% { left: 150%; opacity: 0; }
 }
 
-@keyframes forgePulse {
-  0% { transform: rotate(45deg) scale(1); box-shadow: 0 0 50px var(--accent-glow); }
-  50% { transform: rotate(45deg) scale(1.05); box-shadow: 0 0 100px var(--accent-glow); }
-  100% { transform: rotate(45deg) scale(1); box-shadow: 0 0 50px var(--accent-glow); }
-}
-
-@keyframes forgeGlint {
-  0% { left: -250%; }
-  30% { left: 150%; }
-  100% { left: 150%; }
-}
-
 @media (max-width: 768px) {
-  .forge-logo { width: 80px; height: 80px; }
-  .forge-logo::before { font-size: 2.5rem; }
+  .forge-logo { width: 180px; height: 180px; border-radius: 35px; }
+  .forge-logo::before { font-size: 6.5rem; }
 }
