@@ -94,13 +94,13 @@ const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid" style={{ gridTemplateColumns: '1fr', gap: '30px' }}>
         
         {/* MAIN CAPITAL GAUGE */}
-        <section className="card glow-primary" style={{ borderLeft: `5px solid ${boxColors['capital'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '50px 30px', textAlign: 'center', position: 'relative' }}>
+        <section className="card glow-primary main-gauge-card" style={{ borderLeft: `5px solid ${boxColors['capital'] || 'var(--primary)'}`, background: 'var(--subtle-overlay)', padding: '50px 30px', textAlign: 'center', position: 'relative' }}>
           {renderColorPicker('capital')}
           <label style={{ fontSize: '0.75rem', fontWeight: 900, color: 'var(--text-muted)', letterSpacing: '0.2em' }}>CURRENT AVAILABLE LIQUIDITY</label>
-          <div style={{ fontSize: '4.5rem', fontWeight: 900, margin: '20px 0', color: metrics.liquidityPosition >= 0 ? 'var(--text)' : 'var(--danger)' }} className="currency">
+          <div style={{ fontSize: 'clamp(2.5rem, 10vw, 4.5rem)', fontWeight: 900, margin: '20px 0', color: metrics.liquidityPosition >= 0 ? 'var(--text)' : 'var(--danger)', overflowWrap: 'break-word', wordBreak: 'break-all' }} className="currency">
             ${safeFormat(metrics.liquidityPosition)}
           </div>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center' }}>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
             <div style={{ fontSize: '0.8rem', fontWeight: 800, color: metrics.momentum >= 0 ? 'var(--success)' : 'var(--danger)', background: 'var(--subtle-overlay)', padding: '6px 16px', borderRadius: '20px', border: '1px solid var(--border)' }}>
               MOMENTUM: {metrics.momentum >= 0 ? '+' : ''}${safeFormat(metrics.momentum)}
             </div>
@@ -151,6 +151,15 @@ const Dashboard: React.FC<DashboardProps> = ({
         .dashboard-container { max-width: 1000px; margin: 0 auto; animation: pageEnter 0.4s ease; }
         .dashboard-item-card { transition: all 0.3s ease; }
         .dashboard-item-card:hover { transform: translateY(-4px); box-shadow: 0 15px 35px -10px rgba(59, 130, 246, 0.25); }
+        
+        @media (max-width: 768px) {
+          .main-gauge-card { 
+            padding: 30px 15px !important; 
+          }
+          .main-gauge-card .currency {
+            margin: 10px 0 !important;
+          }
+        }
       `}</style>
     </div>
   );
