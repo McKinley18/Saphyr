@@ -23,6 +23,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isPrivacyMode, setIsPrivacyMode] = useState(
     localStorage.getItem('saphyr_privacy_mode') === 'true'
   );
+  const [isEditMode, setIsEditMode] = useState(false);
 
   // Validate session on mount
   useEffect(() => {
