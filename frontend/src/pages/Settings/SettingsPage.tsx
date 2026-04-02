@@ -6,11 +6,7 @@ import {
   deleteAccountApi, 
   resetAccountApi, 
   fetchTransactions, 
-  fetchAccounts,
-  fetchBudgets,
-  fetchIncomeSources,
-  fetchSnapshots,
-  fetchGoals
+  fetchAccounts
 } from '../../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';

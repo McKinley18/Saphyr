@@ -29,7 +29,6 @@ import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
-import BottomNav from './components/BottomNav/BottomNav';
 
 function AppContent() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -125,9 +124,6 @@ function AppContent() {
         fetchGoals()
       ]);
 
-      // Filter out invalid responses (e.g., if one service is down)
-      const validResponses = responses.filter(res => res && !res.error);
-      
       // Check for unauthorized errors specifically
       const unauthorized = responses.some(res => 
         res && (res.error === 'Authentication required' || res.status === 401 || (typeof res.error === 'string' && res.error.includes('JWT')))
