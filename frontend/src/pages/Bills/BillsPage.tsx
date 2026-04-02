@@ -108,8 +108,8 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
       </div>
 
       <div className="mode-switcher-v2" style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-        <button onClick={() => setActiveTab('tracker')} style={{ flex: 1, background: activeTab === 'tracker' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'tracker' ? 'white' : 'var(--text-muted)' }}>OBLIGATION TRACKER</button>
-        <button onClick={() => setActiveTab('simulator')} style={{ flex: 1, background: activeTab === 'simulator' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'simulator' ? 'white' : 'var(--text-muted)' }}>LOAN SIMULATOR</button>
+        <button onClick={() => setActiveTab('tracker')} style={{ flex: 1, background: activeTab === 'tracker' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'tracker' ? 'white' : 'var(--text-muted)', boxShadow: activeTab === 'tracker' ? '0 0 15px rgba(59, 130, 246, 0.6)' : 'none' }}>OBLIGATION TRACKER</button>
+        <button onClick={() => setActiveTab('simulator')} style={{ flex: 1, background: activeTab === 'simulator' ? 'var(--primary-gradient)' : 'var(--subtle-overlay)', color: activeTab === 'simulator' ? 'white' : 'var(--text-muted)', boxShadow: activeTab === 'simulator' ? '0 0 15px rgba(59, 130, 246, 0.6)' : 'none' }}>LOAN SIMULATOR</button>
       </div>
 
       {activeTab === 'tracker' ? (

@@ -78,7 +78,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         <p>Your "Virtual Vault" represents your total liquid position. Map savings goals to specific accounts to track progress automatically.</p>
       </UserGuide>
 
-      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
         <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
           <label style={{ fontSize: '0.65rem', color: 'var(--primary)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Total</span>
@@ -115,7 +115,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
           </div>
 
           {showAddGoal && (
-            <form onSubmit={handleCreateGoal} className="add-goal-form" style={{ marginBottom: '30px', background: 'var(--subtle-overlay)', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+            <form onSubmit={handleCreateGoal} className="add-goal-form" style={{ marginBottom: '30px', background: 'var(--subtle-overlay)', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
               <div className="form-group"><label>Goal Name</label><input required placeholder="e.g. Emergency Fund" value={newGoal.name} onChange={e => setNewGoal({...newGoal, name: e.target.value})} /></div>
               <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
                 <div className="form-group">
@@ -143,7 +143,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
               const progress = Math.min(100, (parseFloat(goal.current_amount || '0') / parseFloat(goal.target_amount)) * 100);
               const gColor = boxColors[goal.id] || 'var(--primary)';
               return (
-                <div key={goal.id} className="card" style={{ borderTop: `4px solid ${gColor}`, borderLeft: `5px solid ${gColor}`, position: 'relative', padding: '25px' }}>
+                <div key={goal.id} className="card" style={{ borderTop: `4px solid ${gColor}`, borderLeft: `5px solid ${gColor}`, boxShadow: `-4px -4px 25px color-mix(in srgb, ${gColor} 25%, transparent), var(--shadow)`, position: 'relative', padding: '25px' }}>
                   {renderColorPicker(goal.id)}
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <h4 style={{ margin: 0, fontSize: '0.9rem', fontWeight: 900, color: 'var(--text-muted)' }}>{goal.name.toUpperCase()}</h4>

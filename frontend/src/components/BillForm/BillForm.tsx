@@ -114,7 +114,7 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
           <input type="number" value={formData.loan_term} onChange={e => setFormData({...formData, loan_term: e.target.value})} placeholder="e.g. 60" />
         </div>
         
-        <button type="submit" style={{ background: accent, fontWeight: 900 }}>SAVE PAYMENT</button>
+        <button type="submit" style={{ background: accent, fontWeight: 900, boxShadow: `0 0 20px ${accent}` }}>SAVE PAYMENT</button>
       </form>
     </div>
   );

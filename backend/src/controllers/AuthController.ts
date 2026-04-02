@@ -6,11 +6,14 @@ import db from '../database/db.js';
 import { EmailService } from '../services/EmailService.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
 
+import speakeasy from 'speakeasy';
+import QRCode from 'qrcode';
+
 const JWT_SECRET = process.env.JWT_SECRET || 'saphyr-secret-key-2025';
 const COOKIE_OPTIONS = {
   httpOnly: true,
-  secure: true, // Always true for production cross-domain
-  sameSite: 'none' as const, // Required for cross-domain cookies
+  secure: process.env.NODE_ENV === 'production', 
+  sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax' as const,
   maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
 };
 
@@ -23,6 +26,7 @@ export class AuthController {
       last_login_at: user.last_login_at,
       auto_logout_minutes: user.auto_logout_minutes,
       two_factor_method: user.two_factor_method,
+      totp_enabled: !!user.totp_enabled,
       accent_color: user.accent_color,
       currency_symbol: user.currency_symbol,
       visible_tabs: user.visible_tabs ? (typeof user.visible_tabs === 'string' ? JSON.parse(user.visible_tabs) : user.visible_tabs) : null,
@@ -88,6 +92,16 @@ export class AuthController {
 
         return res.json({ 
           require_2fa: true, 
+          method: 'email',
+          email: user.email,
+          userId: user.id 
+        });
+      }
+
+      if (user.two_factor_method === 'totp') {
+        return res.json({ 
+          require_2fa: true, 
+          method: 'totp',
           email: user.email,
           userId: user.id 
         });
@@ -233,17 +247,101 @@ export class AuthController {
     }
   }
 
+  static async setupTOTP(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      const user = await db('users').where({ id: userId }).first();
+      
+      const secret = speakeasy.generateSecret({
+        name: `Saphyr (${user.email})`
+      });
+
+      await db('users').where({ id: userId }).update({
+        totp_secret: secret.base32,
+        totp_enabled: false // Not enabled until verified
+      });
+
+      const qrCodeUrl = await QRCode.toDataURL(secret.otpauth_url!);
+
+      res.json({
+        secret: secret.base32,
+        qrCode: qrCodeUrl
+      });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async verifyTOTPSetup(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      const { code } = req.body;
+      const user = await db('users').where({ id: userId }).first();
+
+      if (!user.totp_secret) {
+        return res.status(400).json({ error: 'TOTP not initialized' });
+      }
+
+      const verified = speakeasy.totp.verify({
+        secret: user.totp_secret,
+        encoding: 'base32',
+        token: code
+      });
+
+      if (verified) {
+        await db('users').where({ id: userId }).update({
+          totp_enabled: true,
+          two_factor_method: 'totp'
+        });
+        res.json({ message: 'TOTP enabled successfully' });
+      } else {
+        res.status(400).json({ error: 'Invalid verification code' });
+      }
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
+  static async disableTOTP(req: AuthRequest, res: Response) {
+    try {
+      const userId = req.userId;
+      await db('users').where({ id: userId }).update({
+        totp_secret: null,
+        totp_enabled: false,
+        two_factor_method: 'none'
+      });
+      res.json({ message: 'TOTP disabled successfully' });
+    } catch (error: any) {
+      res.status(500).json({ error: error.message });
+    }
+  }
+
   static async verify2FA(req: Request, res: Response) {
     try {
       const { userId, code } = req.body;
       const user = await db('users').where({ id: userId }).first();
       
-      if (!user || !user.two_factor_code || new Date() > new Date(user.two_factor_expires_at)) {
-        return res.status(400).json({ error: 'Code expired or invalid. Please try logging in again.' });
+      if (!user) {
+        return res.status(404).json({ error: 'User not found' });
       }
 
-      const isValid = await bcrypt.compare(code, user.two_factor_code);
-      if (!isValid) return res.status(401).json({ error: 'Invalid verification code' });
+      if (user.two_factor_method === 'totp') {
+        const verified = speakeasy.totp.verify({
+          secret: user.totp_secret,
+          encoding: 'base32',
+          token: code
+        });
+        if (!verified) return res.status(401).json({ error: 'Invalid TOTP code' });
+      } else if (user.two_factor_method === 'email') {
+        if (!user.two_factor_code || new Date() > new Date(user.two_factor_expires_at)) {
+          return res.status(400).json({ error: 'Code expired or invalid. Please try logging in again.' });
+        }
+
+        const isValid = await bcrypt.compare(code, user.two_factor_code);
+        if (!isValid) return res.status(401).json({ error: 'Invalid verification code' });
+      } else {
+        return res.status(400).json({ error: '2FA not enabled for this user' });
+      }
 
       await db('users').where({ id: user.id }).update({
         two_factor_code: null,
@@ -253,7 +351,7 @@ export class AuthController {
 
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
       res.cookie('token', token, COOKIE_OPTIONS);
-      res.json({ user: AuthController.userResponse(user) });
+      res.json({ user: AuthController.userResponse(user), token });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }

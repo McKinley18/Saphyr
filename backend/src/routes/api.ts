@@ -30,6 +30,11 @@ router.post('/auth/reset-account', AuthController.resetAccount);
 router.put('/auth/preferences', AuthController.updatePreferences);
 router.delete('/auth/delete-account', AuthController.deleteAccount);
 
+// TOTP Routes
+router.post('/auth/totp/setup', AuthController.setupTOTP);
+router.post('/auth/totp/verify', AuthController.verifyTOTPSetup);
+router.post('/auth/totp/disable', AuthController.disableTOTP);
+
 // Account Routes (Hardened with RLS)
 router.post('/accounts', AccountController.createAccount);
 router.get('/accounts', AccountController.getAccounts);

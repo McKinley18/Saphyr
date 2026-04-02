@@ -126,7 +126,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
         <p>Monitor your financial trajectory. The "Wealth Momentum" chart visualizes your liquid assets expanding against your debt liabilities.</p>
       </UserGuide>
 
-      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+      <div className="tech-specs-bar" style={{ display: 'flex', gap: '20px', marginBottom: '40px', background: 'var(--card)', border: '2px solid var(--border)', borderRadius: '16px', padding: '15px 25px', width: '100%', boxSizing: 'border-box', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
         <div className="spec-gauge" style={{ flex: 1, textAlign: 'center', borderRight: '1px solid var(--item-divider)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end' }}>
           <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.1em', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '0.5rem', opacity: 0.7 }}>Net Worth</span>
@@ -158,7 +158,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
 
       <div className="accounts-grid-layout">
         <div className="workflow-column">
-          <section className="card" style={{ padding: '35px', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', background: 'rgba(59, 130, 246, 0.01)', height: '500px', display: 'flex', flexDirection: 'column' }}>
+          <section className="card" style={{ padding: '35px', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)', background: 'rgba(59, 130, 246, 0.01)', height: '500px', display: 'flex', flexDirection: 'column' }}>
             <h3 style={{ margin: '0 0 25px 0', fontWeight: 900, fontSize: '1.1rem', textAlign: 'center', color: 'var(--text)' }}>WEALTH MOMENTUM</h3>
             <div style={{ flex: 1, width: '100%', position: 'relative' }}>
               {snapshots.length > 1 ? (
@@ -172,13 +172,13 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
           </section>
 
           <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '30px' }}>
-            <div className="card" style={{ padding: '25px', textAlign: 'center', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+            <div className="card" style={{ padding: '25px', textAlign: 'center', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>PROJECTED ASSETS (1YR)</label>
               <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '10px' }} className="currency positive">
                 ${safeFormat(parseFloat(snapshots[snapshots.length-1]?.total_cash || 0) + (metrics.delta * 12))}
               </div>
             </div>
-            <div className="card" style={{ padding: '25px', textAlign: 'center', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+            <div className="card" style={{ padding: '25px', textAlign: 'center', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
               <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>PROJECTED DEBT (1YR)</label>
               <div style={{ fontSize: '1.5rem', fontWeight: 900, marginTop: '10px' }} className="currency negative">
                 ${safeFormat(Math.max(0, parseFloat(snapshots[snapshots.length-1]?.total_debt || 0) - (metrics.delta * 12)))}
@@ -189,7 +189,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
 
         <div className="summary-column">
           <div className="sticky-ticker-column">
-            <section className="card" style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', padding: '35px' }}>
+            <section className="card" style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)', padding: '35px' }}>
               <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1rem', textAlign: 'center', color: 'var(--text)' }}>PREDICTIVE TRAJECTORY</h3>
               <div style={{ marginTop: '30px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
                 <div className="ticker-item card" style={{ padding: '20px', borderTop: '4px solid var(--border)', borderLeft: '5px solid var(--border)' }}>
@@ -199,7 +199,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
                     <span className="currency positive" style={{ fontWeight: 900 }}>+${safeFormat(metrics.delta)}</span>
                   </div>
                 </div>
-                <div className="ticker-item card" style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.02)', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
+                <div className="ticker-item card" style={{ padding: '20px', background: 'rgba(59, 130, 246, 0.02)', borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', boxShadow: '-4px -4px 25px color-mix(in srgb, var(--primary) 25%, transparent), var(--shadow)' }}>
                   <div style={{ fontSize: '0.65rem', fontWeight: 900, color: 'var(--primary)', marginBottom: '10px' }}>STRATEGY INSIGHT</div>
                   <p style={{ fontSize: '0.85rem', lineHeight: '1.6', color: 'var(--text)' }}>
                     At your current <strong>{metrics.savingRate.toFixed(1)}%</strong> saving rate, your net worth is projected to increase by <strong>${safeFormat(metrics.delta * 12)}</strong> over the next 12 months.

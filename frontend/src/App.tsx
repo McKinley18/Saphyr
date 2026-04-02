@@ -29,6 +29,7 @@ import ResetPasswordPage from './pages/Auth/ResetPasswordPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ModalProvider } from './context/ModalContext';
+import BottomNav from './components/BottomNav/BottomNav';
 
 function AppContent() {
   const [accounts, setAccounts] = useState<any[]>([]);
@@ -45,9 +46,26 @@ function AppContent() {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'dark');
   const [lastFetched, setLastFetched] = useState(0);
   const [_retryCount, setRetryCount] = useState(0);
+  const [isBlurred, setIsBlurred] = useState(false);
 
   const { user, loading: authLoading, logout } = useAuth();
   
+  // Privacy Shield: Blur on Idle
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setIsBlurred(true);
+      } else {
+        setIsBlurred(false);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
+
   // Show splash on initial load
   useEffect(() => {
     if (authLoading) setIsSplashActive(true);
@@ -107,11 +125,21 @@ function AppContent() {
         fetchGoals()
       ]);
 
-      // Check for unauthorized errors in any response
-      const unauthorized = responses.some(res => res && (res.error === 'Authentication required' || res.status === 401));
+      // Filter out invalid responses (e.g., if one service is down)
+      const validResponses = responses.filter(res => res && !res.error);
+      
+      // Check for unauthorized errors specifically
+      const unauthorized = responses.some(res => 
+        res && (res.error === 'Authentication required' || res.status === 401 || (typeof res.error === 'string' && res.error.includes('JWT')))
+      );
+      
       if (unauthorized) {
         console.error("🚫 Saphyr: Session Invalid. Redirecting...");
-        logout();
+        // On mobile, sometimes cookies aren't ready yet or network blips occur. 
+        // Only logout if we are sure user isn't locally cached.
+        if (localStorage.getItem('saphyr_user')) {
+          logout();
+        }
         return;
       }
       
@@ -191,9 +219,18 @@ function AppContent() {
 
       <div style={{ 
         opacity: isSplashActive ? 0 : 1,
-        transition: 'opacity 1s ease',
-        minHeight: '100vh'
+        transition: 'opacity 1s ease, filter 0.3s ease',
+        minHeight: '100vh',
+        filter: isBlurred ? 'blur(10px) grayscale(50%)' : 'none',
+        pointerEvents: isBlurred ? 'none' : 'auto'
       }}>
+        {isBlurred && (
+          <div style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, color: 'var(--text)', fontSize: '2rem', fontWeight: 900, textShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+            <div style={{ background: 'var(--card)', padding: '20px 40px', borderRadius: '20px', border: '2px solid var(--primary)', boxShadow: '0 20px 50px rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <span>🔒</span> PRIVACY SHIELD ACTIVE
+            </div>
+          </div>
+        )}
         <Navbar theme={theme} toggleTheme={toggleTheme} />
         <div className="container">
           {error && (

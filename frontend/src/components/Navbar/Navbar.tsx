@@ -38,19 +38,33 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
 
   // Define all available tabs
   const allTabs = [
-    { path: '/', label: 'Dashboard' },
-    { path: '/income', label: 'Income' },
-    { path: '/accounts', label: 'Accounts' },
-    { path: '/bills', label: 'Bills' },
-    { path: '/transactions', label: 'Transactions' },
-    { path: '/trends', label: 'Trends' },
-    { path: '/settings', label: 'Settings' },
+    { path: '/', label: 'Dashboard', type: 'primary' },
+    { path: '/income', label: 'Income', type: 'primary' },
+    { path: '/accounts', label: 'Accounts', type: 'primary' },
+    { path: '/bills', label: 'Bills', type: 'secondary' },
+    { path: '/transactions', label: 'Transactions', type: 'primary' },
+    { path: '/trends', label: 'Trends', type: 'primary' },
+    { path: '/settings', label: 'Settings', type: 'secondary' },
   ];
+
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   const visibleTabs = user?.visible_tabs;
   const filteredTabs = Array.isArray(visibleTabs) && visibleTabs.length > 0
     ? allTabs.filter(tab => visibleTabs.includes(tab.path))
     : allTabs;
+
+  // Restore full menu for everyone
+  const menuTabs = filteredTabs;
+  
+  // Keep desktop bar for convenience on large screens
+  const desktopTabs = filteredTabs.filter(tab => tab.type === 'primary');
 
   if (!user) return null;
 
@@ -68,6 +82,20 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
               <span className="brand-tagline">Financial Tracker</span>
             </div>
           </Link>
+
+          {!isMobile && (
+            <div className="desktop-nav">
+              {desktopTabs.map((tab: any) => (
+                <Link 
+                  key={tab.path} 
+                  to={tab.path} 
+                  className={`desktop-link ${location.pathname === tab.path ? 'active' : ''}`}
+                >
+                  {tab.label}
+                </Link>
+              ))}
+            </div>
+          )}
           
           <div className="navbar-right">
             {isEditMode && (
@@ -135,7 +163,7 @@ const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
                 <div style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem', marginTop: '4px' }}>{user.full_name || user.email}</div>
               </div>
               
-              {filteredTabs.map((tab: any) => (
+              {menuTabs.map((tab: any) => (
                 <Link 
                   key={tab.path} 
                   to={tab.path} 

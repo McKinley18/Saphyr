@@ -32,7 +32,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: (origin, callback) => {
     // allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
+    if (!origin || process.env.NODE_ENV !== 'production') return callback(null, true);
     
     // Check if origin is in our allowed list (supports trailing slashes)
     const normalizedOrigin = origin.replace(/\/$/, "");

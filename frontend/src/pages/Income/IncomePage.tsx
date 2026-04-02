@@ -186,10 +186,6 @@ const IncomePage: React.FC<IncomePageProps> = ({
         <UserGuide guideKey="income_v7" title="Income Architect">
           <p>Your financial command deck. Follow the steps to build your net wealth projection.</p>
         </UserGuide>
-        <div style={{ display: 'flex', gap: '15px' }}>
-          <button onClick={handleExportBlueprint} className="export-blueprint-btn">EXPORT BLUEPRINT</button>
-          <button onClick={handleResetIncomeOnly} className="reset-architect-btn">RESET ARCHITECT</button>
-        </div>
       </div>
 
       <div className="tech-specs-bar">
@@ -227,8 +223,8 @@ const IncomePage: React.FC<IncomePageProps> = ({
               {activeStep === 1 && (
                 <div className="step-content-expanded">
                   <div className="mode-switcher" style={{ marginBottom: '30px' }}>
-                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: 'var(--primary-gradient)' } : {}}>SALARY</button>
-                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: 'var(--primary-gradient)' } : {}}>HOURLY</button>
+                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: 'var(--primary-gradient)', boxShadow: '0 0 15px var(--primary)' } : {}}>SALARY</button>
+                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: 'var(--primary-gradient)', boxShadow: '0 0 15px var(--primary)' } : {}}>HOURLY</button>
                   </div>
 
                   <form onSubmit={onSaveProfile} className="workflow-form" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
@@ -398,6 +394,18 @@ const IncomePage: React.FC<IncomePageProps> = ({
         <div className="footer-value currency positive">${safeFormat(totalVerifiedNetMonthly)}</div>
       </div>
 
+      <div className="footer-actions" style={{ display: 'flex', gap: '20px', marginTop: '40px', paddingBottom: '60px' }}>
+        <div className="card glow-saphyr highlight-hover" onClick={handleExportBlueprint} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', background: 'rgba(59, 130, 246, 0.05)', padding: '30px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '2px dashed var(--primary)' }}>
+          <div style={{ fontWeight: 900, fontSize: '1.3rem', marginBottom: '8px', color: 'var(--primary)' }}>🔒 EXPORT BLUEPRINT</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Professional PDF Income Projection</div>
+        </div>
+
+        <div className="card glow-danger highlight-hover" onClick={handleResetIncomeOnly} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', padding: '30px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '2px dashed var(--danger)' }}>
+          <div style={{ fontWeight: 900, fontSize: '1.3rem', marginBottom: '8px', color: 'var(--danger)' }}>⚠️ RESET ARCHITECT</div>
+          <div style={{ fontSize: '0.75rem', color: 'var(--text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Purge All Income and Tax Data</div>
+        </div>
+      </div>
+
       <style>{`
         .income-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
         .export-blueprint-btn { width: auto; background: var(--primary-gradient); color: white; font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
@@ -460,6 +468,10 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
         .mobile-summary-footer { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 3px solid var(--primary); padding: 15px 25px; z-index: 1000; justify-content: space-between; align-items: center; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
         @media (max-width: 1023px) { .summary-column { display: none; } .mobile-summary-footer { display: flex; } .income-page { padding-bottom: 100px; } }
+        
+        @media (max-width: 768px) {
+          .footer-actions { flex-direction: column !important; gap: 15px !important; }
+        }
 
         .primary-btn { width: 100%; fontWeight: 900; margin-top: 10px; }
         .warning-btn { width: auto; background: var(--warning-gradient); color: white; font-weight: 900; margin-top: 0; }

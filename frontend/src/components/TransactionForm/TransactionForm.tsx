@@ -147,7 +147,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
           />
         </div>
 
-        <button type="submit" style={{ background: accent, fontWeight: 900 }}>LOG TRANSACTION</button>
+        <button type="submit" style={{ background: accent, fontWeight: 900, boxShadow: `0 0 20px ${accent}` }}>LOG TRANSACTION</button>
       </form>
     </div>
   );

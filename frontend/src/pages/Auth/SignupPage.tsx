@@ -54,7 +54,9 @@ const SignupPage: React.FC = () => {
     <div style={{ maxWidth: '400px', margin: '80px auto', padding: '20px' }}>
       <div className="card" style={{ borderTop: '5px solid var(--primary)' }}>
         <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div className="logo-icon" style={{ margin: '0 auto 15px auto' }}></div>
+          <div className="logo-container" style={{ margin: '0 auto 15px auto' }}>
+            <div className="logo-icon"></div>
+          </div>
           <h2 style={{ fontSize: '1.5rem', fontWeight: 900, color: 'var(--primary)' }}>Create Your Account</h2>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginTop: '5px' }}>Join Saphyr and start tracking</p>
         </div>
@@ -122,7 +124,7 @@ const SignupPage: React.FC = () => {
             />
           </div>
           
-          <button type="submit" disabled={loading} style={{ marginTop: '10px' }}>
+          <button type="submit" disabled={loading} className="primary-btn" style={{ marginTop: '10px' }}>
             {loading ? 'Creating Account...' : 'Get Started'}
           </button>
         </form>

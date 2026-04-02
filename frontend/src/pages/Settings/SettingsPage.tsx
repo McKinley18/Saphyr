@@ -1,7 +1,17 @@
 import React, { useState } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { useModal } from '../../context/ModalContext';
-import { updatePassword, deleteAccountApi, resetAccountApi, fetchTransactions, fetchAccounts } from '../../services/api';
+import { 
+  updatePassword, 
+  deleteAccountApi, 
+  resetAccountApi, 
+  fetchTransactions, 
+  fetchAccounts,
+  fetchBudgets,
+  fetchIncomeSources,
+  fetchSnapshots,
+  fetchGoals
+} from '../../services/api';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
@@ -17,6 +27,55 @@ const SettingsPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [isDangerExpanded, setIsDangerExpanded] = useState(false);
   const [is2FAExpanded, setIs2FAExpanded] = useState(false);
+  const [totpSetup, setTotpSetup] = useState<{ secret: string; qrCode: string } | null>(null);
+  const [totpCode, setTotpCode] = useState('');
+
+  const handleSetupTOTP = async () => {
+    try {
+      const res = await fetch('/api/auth/totp/setup', { method: 'POST' });
+      const data = await res.json();
+      setTotpSetup(data);
+    } catch (err) {
+      setMessage({ text: 'TOTP setup failed', type: 'error' });
+    }
+  };
+
+  const handleVerifyTOTP = async () => {
+    try {
+      const res = await fetch('/api/auth/totp/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: totpCode })
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setMessage({ text: 'TOTP ENABLED!', type: 'success' });
+      setTotpSetup(null);
+      setTotpCode('');
+      setTimeout(() => window.location.reload(), 1500);
+    } catch (err: any) {
+      setMessage({ text: err.message, type: 'error' });
+    }
+  };
+
+  const handleDisableTOTP = async () => {
+    const confirmDisable = await confirm({
+      title: 'Disable Authenticator App',
+      message: 'This will reduce your account security. Are you sure?',
+      confirmLabel: 'DISABLE TOTP',
+      isDanger: true
+    });
+
+    if (confirmDisable) {
+      try {
+        await fetch('/api/auth/totp/disable', { method: 'POST' });
+        setMessage({ text: 'TOTP DISABLED', type: 'success' });
+        setTimeout(() => window.location.reload(), 1500);
+      } catch (err) {
+        setMessage({ text: 'Failed to disable TOTP', type: 'error' });
+      }
+    }
+  };
   const [isIdentityExpanded, setIsIdentityExpanded] = useState(false);
   
   const [hideGuides, setHideGuides] = useState(
@@ -342,7 +401,8 @@ const SettingsPage: React.FC = () => {
                 </button>
                 {is2FAExpanded && (
                   <div style={{ padding: '25px', borderTop: '1px solid var(--border)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    {/* Email 2FA */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>
                       <div>
                         <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>EMAIL VERIFICATION</div>
                         <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Receive a secure code via email during login.</div>
@@ -350,6 +410,41 @@ const SettingsPage: React.FC = () => {
                       <button onClick={() => updateUserPreferences({ two_factor_method: user?.two_factor_method === 'email' ? 'none' : 'email' })} style={{ width: 'auto', padding: '10px 20px', background: user?.two_factor_method === 'email' ? 'var(--primary)' : 'var(--inactive-bg)', color: user?.two_factor_method === 'email' ? 'white' : 'var(--inactive-text)', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: '1px solid var(--border)' }}>
                         {user?.two_factor_method === 'email' ? '[ENABLED]' : '[DISABLED]'}
                       </button>
+                    </div>
+
+                    {/* TOTP 2FA */}
+                    <div style={{ borderTop: '1px solid var(--border)', paddingTop: '25px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>AUTHENTICATOR APP (TOTP)</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Use an app like Google Authenticator or Authy.</div>
+                        </div>
+                        {user?.totp_enabled ? (
+                          <button onClick={handleDisableTOTP} style={{ width: 'auto', padding: '10px 20px', background: 'var(--danger)', color: 'white', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: 'none' }}>
+                            [DISABLE]
+                          </button>
+                        ) : (
+                          <button onClick={handleSetupTOTP} disabled={!!totpSetup} style={{ width: 'auto', padding: '10px 20px', background: 'var(--primary)', color: 'white', fontSize: '0.75rem', fontWeight: 800, marginTop: 0, border: 'none' }}>
+                            {totpSetup ? 'SETUP IN PROGRESS' : '[CONFIGURE]'}
+                          </button>
+                        )}
+                      </div>
+
+                      {totpSetup && (
+                        <div style={{ marginTop: '25px', padding: '20px', background: 'rgba(255,255,255,0.02)', borderRadius: '12px', border: '1px dashed var(--primary)', textAlign: 'center' }}>
+                          <p style={{ fontSize: '0.85rem', marginBottom: '15px' }}>1. Scan this QR code with your Authenticator app:</p>
+                          <img src={totpSetup.qrCode} alt="TOTP QR Code" style={{ background: 'white', padding: '10px', borderRadius: '10px', marginBottom: '15px' }} />
+                          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginBottom: '15px' }}>Or enter manually: <code style={{ color: 'var(--primary)' }}>{totpSetup.secret}</code></p>
+                          <div className="form-group" style={{ maxWidth: '200px', margin: '0 auto 15px auto' }}>
+                            <label>2. Enter Code to Verify</label>
+                            <input type="text" value={totpCode} onChange={e => setTotpCode(e.target.value)} placeholder="000000" style={{ textAlign: 'center', fontSize: '1.2rem', letterSpacing: '0.2em' }} maxLength={6} />
+                          </div>
+                          <div style={{ display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            <button onClick={handleVerifyTOTP} style={{ background: 'var(--success)', fontSize: '0.75rem', padding: '10px 20px', width: 'auto', marginTop: 0 }}>ACTIVATE TOTP</button>
+                            <button onClick={() => setTotpSetup(null)} style={{ background: 'none', border: '1px solid var(--border)', fontSize: '0.75rem', padding: '10px 20px', width: 'auto', marginTop: 0, boxShadow: 'none' }}>CANCEL</button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -374,10 +469,9 @@ const SettingsPage: React.FC = () => {
             </div>
           </section>
 
-          {/* SECTION 4: DATA MANAGEMENT */}
           <section id="data">
             <h2 style={{ fontSize: '1.5rem', fontWeight: 900, marginBottom: '25px', borderBottom: '2px solid var(--success)', paddingBottom: '10px', textAlign: 'center' }}>DATA MANAGEMENT</h2>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '20px' }}>
               <div className="card glow-success highlight-hover" onClick={handleExportCSV} style={{ cursor: 'pointer', textAlign: 'center', background: 'rgba(255,255,255,0.01)', height: '120px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center' }}>
                 <div style={{ fontWeight: 900, fontSize: '1.1rem', marginBottom: '5px' }}>CSV EXPORT</div>
                 <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Raw Transaction Logs</div>

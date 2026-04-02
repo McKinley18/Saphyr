@@ -126,7 +126,7 @@ const AccountForm: React.FC<AccountFormProps> = ({
         </div>
 
         <div style={{ display: 'flex', gap: '15px', marginTop: '10px' }}>
-          <button type="submit" style={{ flex: 2, background: accent }}>
+          <button type="submit" style={{ flex: 2, background: accent, boxShadow: `0 0 20px ${accent}` }}>
             {initialData ? 'SAVE CHANGES' : 'CREATE ACCOUNT'}
           </button>
           {onCancel && (
