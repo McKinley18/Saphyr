@@ -4,11 +4,15 @@ This document serves as the primary reference for the Saphyr Finance project. Al
 
 ## 1. Aesthetic & Design System
 - **Tone:** Premium, private, minimalist, and high-contrast.
-- **The Saphyr Brand:** The primary logo and loading splash screen MUST utilize the precision-cut Sapphire Gemstone shape (via `clip-path`) and an inner multi-stop light-refraction gradient.
+- **The Saphyr Brand:** The primary logo and loading splash screen MUST utilize the precision-cut Sapphire Gemstone shape (via `clip-path`) and an inner multi-stop light-refraction gradient, complemented by a pulsing `drop-shadow`.
 - **The Dual-Glow Architecture:** ALL structural cards (Dashboard modules, Settings sections, Tech Spec gauges) MUST utilize the dual-border glow system:
   - **4px Top Border**
   - **5px Left Border**
+  - **Dynamic Shimmer:** The borders must use the `--shimmer-primary` gradient (or its success/danger variants) with a 600% background size and a linear animation to create a white-hot sweeping light effect.
   - The default color for these structural borders is Saphyr Blue (`var(--primary)`), implemented via the `.glow-primary` or `.glow-saphyr` classes.
+- **Button Styling:**
+  - Base buttons use standard styling with a subtle shadow.
+  - Primary "Call to Action" buttons (e.g., "Sign In", "Log Transaction", "Export") MUST use the `.primary-btn` class or inline styles to apply an intense, radiant box-shadow glow that matches the user's active accent color. Toggle buttons only glow when actively selected.
 - **Color Palette & Themes:**
   - **OLED Dark Mode:** True `#000000` black backgrounds with hyper-contrasted neon accents for maximum battery savings.
   - **Standard Dark Mode:** Soft `#09090b` for low-light reading.
@@ -33,6 +37,7 @@ This document serves as the primary reference for the Saphyr Finance project. Al
   - **Blur-on-Idle:** The application must automatically blur its state via `visibilitychange` listeners when the tab loses focus.
   - **Data Ownership:** Users must always have the ability to export their entire encrypted/stringified state as a raw JSON Vault Backup.
   - **Authentication:** Support for both Email and TOTP (Authenticator App) 2FA methods.
+  - **Automatic Sweep:** Support for an automated monthly sweep function that moves unallocated capital into a designated savings goal.
 
 ## 4. Engineering Standards
 - **Validation:** Every change must be build-verified (`npm run build`) before final delivery.
