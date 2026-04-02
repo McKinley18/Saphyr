@@ -42,9 +42,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     checkSession();
   }, []);
 
-  const login = (userData: any) => {
+  const login = (userData: any, token?: string) => {
     setUser(userData);
     localStorage.setItem('saphyr_user', JSON.stringify(userData));
+    if (token) {
+      localStorage.setItem('saphyr_token', token);
+    }
   };
 
   const logout = async () => {
@@ -55,6 +58,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
     setUser(null);
     localStorage.removeItem('saphyr_user');
+    localStorage.removeItem('saphyr_token');
     navigate('/login');
   };
 

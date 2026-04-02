@@ -4,15 +4,20 @@ const API_URL = import.meta.env.VITE_API_URL ||
 console.log('📡 Saphyr API Layer initialized at:', API_URL);
 
 const getHeaders = () => {
-  return {
+  const headers: any = {
     'Content-Type': 'application/json'
   };
+  const token = localStorage.getItem('saphyr_token');
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
 };
 
 export const signup = async (data: any) => {
   const response = await fetch(`${API_URL}/auth/signup`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(data),
     credentials: 'include'
   });
@@ -22,7 +27,7 @@ export const signup = async (data: any) => {
 export const login = async (data: any) => {
   const response = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(data),
     credentials: 'include'
   });
@@ -41,7 +46,7 @@ export const logout = async () => {
 export const verify2FA = async (data: any) => {
   const response = await fetch(`${API_URL}/auth/verify-2fa`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(data),
     credentials: 'include'
   });
@@ -51,7 +56,7 @@ export const verify2FA = async (data: any) => {
 export const forgotPassword = async (email: string) => {
   const response = await fetch(`${API_URL}/auth/forgot-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify({ email }),
     credentials: 'include'
   });
@@ -61,7 +66,7 @@ export const forgotPassword = async (email: string) => {
 export const resetPassword = async (data: any) => {
   const response = await fetch(`${API_URL}/auth/reset-password`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getHeaders(),
     body: JSON.stringify(data),
     credentials: 'include'
   });

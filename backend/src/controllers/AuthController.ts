@@ -58,7 +58,10 @@ export class AuthController {
       const token = jwt.sign({ userId: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
       res.cookie('token', token, COOKIE_OPTIONS);
-      res.status(201).json({ user: AuthController.userResponse(user) });
+      res.status(201).json({ 
+        user: AuthController.userResponse(user),
+        token 
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
@@ -241,7 +244,12 @@ export class AuthController {
       await db('users').where({ id: userId }).update(updateData);
       const updatedUser = await db('users').where({ id: userId }).first();
 
-      res.json({ message: 'Preferences updated', user: AuthController.userResponse(updatedUser) });
+      const token = jwt.sign({ userId: updatedUser.id }, JWT_SECRET, { expiresIn: '7d' });
+      res.json({ 
+        message: 'Preferences updated', 
+        user: AuthController.userResponse(updatedUser),
+        token 
+      });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
