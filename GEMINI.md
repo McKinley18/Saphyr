@@ -24,19 +24,25 @@ This document serves as the primary reference for the Saphyr Finance project. Al
 
 ## 2. Mobile Optimization ("Mobile Pro")
 - **PWA Ready:** Standalone manifest support (`mobile-web-app-capable`) for "Add to Home Screen" without browser bars.
-- **Navigation:** Bottom Tab Bar for primary links, Hamburger Menu for secondary navigation.
+- **Navigation:** 
+  - **Desktop:** Primary navigation links (Dashboard, Income, Accounts, Transactions, Trends) are displayed directly in the top Navbar for high-efficiency access. Secondary links (Settings, Bills, Logout) are in the Hamburger Menu.
+  - **Mobile:** Primary navigation is moved to a fixed **Bottom Tab Bar** (⌂, 💳, 📝, 💰, 📈). The Hamburger Menu is strictly for secondary navigation (Settings, Bills, Logout) to maintain "Mobile Pro" minimalist standards.
 - **Form Inputs:** 
   - Currency inputs must use `.currency-input-wrapper` with the `$` prefix embedded *inside* the box.
   - Date inputs must use native OS pickers (via `showPicker()`) on click.
 
 ## 3. Core Architecture Patterns
+- **Authentication & Security:** 
+  - **Hybrid Auth:** Secure sessions are maintained via a dual-layer system using both HTTP-Only Cookies and `localStorage` Bearer Tokens to ensure stability across mobile browsers that restrict cross-site tracking.
+  - **2FA:** Support for both Email and TOTP (Authenticator App) 2FA methods, configurable in Account Security.
 - **Client-Side Intelligence:** Features like Algorithmic Merchant Categorization and Anomaly Detection MUST be processed in the browser (frontend) to maximize data privacy and minimize server load.
 - **Privacy-First Data Ingestion:** Bulk CSV Imports are parsed and validated entirely client-side using the `FileReader` API. Raw files are NEVER sent to the backend.
 - **The "What-If" Sandbox:** Simulation tools (like loan or purchase calculators) must exist in an isolated state that pulls live metrics but never accidentally mutates the production database.
+- **The Income Architect:** 
+  - Structural cards for **EXPORT BLUEPRINT** and **RESET ARCHITECT** must be placed at the bottom of the workflow as high-visibility, dashed-border structural modules.
 - **Security & Portability:**
   - **Blur-on-Idle:** The application must automatically blur its state via `visibilitychange` listeners when the tab loses focus.
-  - **Data Ownership:** Users must always have the ability to export their entire encrypted/stringified state as a raw JSON Vault Backup.
-  - **Authentication:** Support for both Email and TOTP (Authenticator App) 2FA methods.
+  - **Data Ownership:** Users must always have the ability to export their entire transaction history via CSV or a professional PDF Statement.
   - **Automatic Sweep:** Support for an automated monthly sweep function that moves unallocated capital into a designated savings goal.
 
 ## 4. Engineering Standards
