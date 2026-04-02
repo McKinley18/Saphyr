@@ -4,7 +4,7 @@ import { logout as apiLogout } from '../services/api';
 
 interface AuthContextType {
   user: any | null;
-  login: (user: any) => void;
+  login: (user: any, token?: string) => void;
   logout: () => void;
   loading: boolean;
   isPrivacyMode: boolean;
