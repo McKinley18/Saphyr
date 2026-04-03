@@ -240,7 +240,8 @@ input:focus, select:focus {
 
 button {
   background: var(--primary-gradient);
-  color: white; border: none;
+  color: white; 
+  border: none;
   padding: 14px 28px; border-radius: 14px;
   font-weight: 900; text-transform: uppercase;
   transition: all 0.3s ease;

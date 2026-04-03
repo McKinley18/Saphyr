@@ -91,7 +91,6 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const [isSourceFormOpen, setIsSourceFormOpen] = useState(false);
 
   const [syncMessage, setSyncMessage] = useState('');
-  const [hasInitialPopulated, setHasInitialPopulated] = useState(false);
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('saphyr_income_colors_v2');
@@ -124,18 +123,6 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
-  useEffect(() => {
-    if (savedSalary && !hasInitialPopulated) {
-      setIsHourly(!!savedSalary.is_hourly);
-      if (savedSalary.is_hourly) { setHourlyRate(savedSalary.hourly_rate || 0); setHoursPerWeek(savedSalary.hours_per_week || 40); } 
-      else { setAnnualGross(savedSalary.annual_salary || 0); }
-      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
-      setLocalFilingStatus(savedSalary.filing_status || '');
-      setLocalState(savedSalary.state || '');
-      setHasInitialPopulated(true);
-    }
-  }, [savedSalary, hasInitialPopulated]);
-
   const safeFormat = (val: any) => {
     const num = parseFloat(val || '0');
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -147,7 +134,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
     const payload = { is_hourly: isHourly, hourly_rate: isHourly ? Number(hourlyRate) : 0, hours_per_week: isHourly ? Number(hoursPerWeek) : 40, annual_salary: calculatedAnnual, contribution_401k_percent: Number(pct401k) / 100, state: localState, filing_status: localFilingStatus, account_id: null };
     setSyncMessage('SYNCING...');
     await handleSalarySubmit(e, localFilingStatus, payload);
-    setAnnualGross(0); setHourlyRate(0); setPct401k(0); setLocalFilingStatus(''); setLocalState('');
+    
+    // FULL FORGE RESET
+    setAnnualGross(0);
+    setHourlyRate(0);
+    setPct401k(0);
+    setLocalFilingStatus('');
+    setLocalState('');
+    setIsHourly(false);
+    
     setSyncMessage('PROFILE UPDATED');
     setTimeout(() => setSyncMessage(''), 3000);
   };
@@ -259,7 +254,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <div style={groupStyle}><label style={labelStyle}>Residing State</label><select style={{ padding: '18px 20px' }} value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
             </div>
             <div style={groupStyle}><label style={labelStyle}>401k Contribution (%)</label><input style={{ padding: '18px 20px' }} type="number" value={pct401k || ''} onChange={e => setPct401k(parseFloat(e.target.value) || 0)} placeholder="e.g. 6" /></div>
-            <button type="submit" className="primary-btn" style={{ height: '60px', fontSize: '1.1rem', background: boxColors['income'] || 'var(--primary-gradient)', marginTop: '10px' }}>{syncMessage || 'SYNC CURRENT PROFILE'}</button>
+            <button type="submit" className="primary-btn" style={{ height: '60px', fontSize: '1.1rem', background: boxColors['income'] || 'var(--primary-gradient)', marginTop: '10px', color: 'var(--text) !important' }}>{syncMessage || 'SYNC CURRENT PROFILE'}</button>
           </form>
         </section>
       </SortableItem>
@@ -317,14 +312,19 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--warning)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Manage Deductions</div>
               <div className="item-list">
                 {(savedSalary?.custom_deductions || []).map((d: any) => (
-                  <div key={d.id} className="workflow-item" onClick={() => handleEditDeduction(d)} style={{ cursor: 'pointer', padding: '15px' }}>
-                    <div style={{ flex: 1 }}><div style={{ fontWeight: 900, fontSize: '1rem' }}>{d.name.toUpperCase()}</div><div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{d.frequency.toUpperCase()} • {d.is_pre_tax ? 'PRE-TAX' : 'POST-TAX'}</div></div>
-                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}><div className="currency" style={{ fontWeight: 900, color: 'var(--danger)', fontSize: '1.1rem' }}>-${safeFormat(d.amount)}</div><div style={{ display: 'flex', gap: '8px' }}><button onClick={() => handleEditDeduction(d)} className="edit-mini-btn" style={{ fontSize: '1.2rem' }}>✎</button><button onClick={async (e) => { e.stopPropagation(); await deleteDeduction(d.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem' }}>&times;</button></div></div>
+                  <div key={d.id} className="workflow-item" onClick={() => handleEditDeduction(d)} style={{ cursor: 'pointer', padding: '15px', display: 'grid', gridTemplateColumns: '1fr auto', gridTemplateRows: 'auto auto', gap: '5px 15px' }}>
+                    <div style={{ gridColumn: '1', gridRow: '1', fontWeight: 900, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.name.toUpperCase()}</div>
+                    <div style={{ gridColumn: '2', gridRow: '1', display: 'flex', gap: '4px', flexShrink: 0, justifyContent: 'flex-end' }}>
+                      <button onClick={(e) => { e.stopPropagation(); handleEditDeduction(d); }} className="edit-mini-btn" style={{ fontSize: '1.2rem', padding: '5px' }}>✎</button>
+                      <button onClick={async (e) => { e.stopPropagation(); await deleteDeduction(d.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem', padding: '5px' }}>&times;</button>
+                    </div>
+                    <div style={{ gridColumn: '1', gridRow: '2', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{d.frequency.toUpperCase()} • {d.is_pre_tax ? 'PRE-TAX' : 'POST-TAX'}</div>
+                    <div className="currency" style={{ gridColumn: '2', gridRow: '2', fontWeight: 900, color: 'var(--danger)', fontSize: '1.1rem', textAlign: 'right' }}>-${safeFormat(d.amount)}</div>
                   </div>
                 ))}
               </div>
               {!isDeductionFormOpen ? (
-                <button className="primary-btn" onClick={() => setIsDeductionFormOpen(true)} style={{ background: 'var(--warning-gradient)', height: '60px', marginTop: '10px' }}>LOG NEW DEDUCTION</button>
+                <button className="primary-btn" onClick={() => setIsDeductionFormOpen(true)} style={{ background: 'var(--warning-gradient)', height: '60px', marginTop: '10px', color: 'var(--text) !important' }}>LOG NEW DEDUCTION</button>
               ) : (
                 <form id="deduction-form" onSubmit={onDeductionSubmit} style={{ marginTop: '20px' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', textAlign: 'center', marginBottom: '30px', letterSpacing: '0.1em', background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>{newDeduction.id ? `EDITING: ${newDeduction.name.toUpperCase()}` : 'NEW DEDUCTION ENTRY'}</div>
@@ -334,7 +334,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     <div style={groupStyle}><label style={labelStyle}>Frequency</label><select style={{ padding: '18px 20px' }} value={newDeduction.frequency} onChange={e => setNewDeduction({...newDeduction, frequency: e.target.value})}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select></div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center', marginBottom: '30px' }}><input type="checkbox" id="preTaxCheck" checked={newDeduction.is_pre_tax} onChange={e => setNewDeduction({...newDeduction, is_pre_tax: e.target.checked})} style={{ width: '18px', height: '18px' }} /><label htmlFor="preTaxCheck" style={{ fontSize: '0.85rem', fontWeight: 800 }}>IS THIS PRE-TAX?</label></div>
-                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--warning-gradient)', height: '60px' }}>{newDeduction.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsDeductionFormOpen(false); setNewDeduction({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
+                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--warning-gradient)', height: '60px', color: 'var(--text) !important' }}>{newDeduction.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsDeductionFormOpen(false); setNewDeduction({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
                 </form>
               )}
             </section>
@@ -342,14 +342,19 @@ const IncomePage: React.FC<IncomePageProps> = ({
               <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--success)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Manage Other Income</div>
               <div className="item-list">
                 {(incomeSources || []).map(source => (
-                  <div key={source.id} className="workflow-item" onClick={() => handleEditSource(source)} style={{ cursor: 'pointer', padding: '15px' }}>
-                    <div style={{ flex: 1 }}><div style={{ fontWeight: 900, fontSize: '1rem' }}>{source.name.toUpperCase()}</div><div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{source.frequency.toUpperCase()} {source.is_taxed && '• TAXED'}</div></div>
-                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}><div className="currency" style={{ fontWeight: 900, color: 'var(--success)', fontSize: '1.1rem' }}>+${safeFormat(source.amount)}</div><div style={{ display: 'flex', gap: '8px' }}><button onClick={() => handleEditSource(source)} className="edit-mini-btn" style={{ fontSize: '1.2rem' }}>✎</button><button onClick={async (e) => { e.stopPropagation(); await deleteIncomeSource(source.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem' }}>&times;</button></div></div>
+                  <div key={source.id} className="workflow-item" onClick={() => handleEditSource(source)} style={{ cursor: 'pointer', padding: '15px', display: 'grid', gridTemplateColumns: '1fr auto', gridTemplateRows: 'auto auto', gap: '5px 15px' }}>
+                    <div style={{ gridColumn: '1', gridRow: '1', fontWeight: 900, fontSize: '1rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{source.name.toUpperCase()}</div>
+                    <div style={{ gridColumn: '2', gridRow: '1', display: 'flex', gap: '4px', flexShrink: 0, justifyContent: 'flex-end' }}>
+                      <button onClick={(e) => { e.stopPropagation(); handleEditSource(source); }} className="edit-mini-btn" style={{ fontSize: '1.2rem', padding: '5px' }}>✎</button>
+                      <button onClick={async (e) => { e.stopPropagation(); await deleteIncomeSource(source.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem', padding: '5px' }}>&times;</button>
+                    </div>
+                    <div style={{ gridColumn: '1', gridRow: '2', fontSize: '0.75rem', color: 'var(--text-muted)' }}>{source.frequency.toUpperCase()} {source.is_taxed && '• TAXED'}</div>
+                    <div className="currency" style={{ gridColumn: '2', gridRow: '2', fontWeight: 900, color: 'var(--success)', fontSize: '1.1rem', textAlign: 'right' }}>+${safeFormat(source.amount)}</div>
                   </div>
                 ))}
               </div>
               {!isSourceFormOpen ? (
-                <button className="primary-btn" onClick={() => setIsSourceFormOpen(true)} style={{ background: 'var(--success-gradient)', height: '60px', marginTop: '10px' }}>LOG NEW INCOME</button>
+                <button className="primary-btn" onClick={() => setIsSourceFormOpen(true)} style={{ background: 'var(--success-gradient)', height: '60px', marginTop: '10px', color: 'var(--text) !important' }}>LOG NEW INCOME</button>
               ) : (
                 <form id="source-form" onSubmit={onSourceSubmit} style={{ marginTop: '20px' }}>
                   <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', textAlign: 'center', marginBottom: '30px', letterSpacing: '0.1em', background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>{newSource.id ? `EDITING: ${newSource.name.toUpperCase()}` : 'NEW REVENUE ENTRY'}</div>
@@ -359,7 +364,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
                     <div style={groupStyle}><label style={labelStyle}>Frequency</label><select style={{ padding: '18px 20px' }} value={newSource.frequency} onChange={e => setNewSource({...newSource, frequency: e.target.value})}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select></div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center', marginBottom: '30px' }}><input type="checkbox" id="taxedCheck" checked={newSource.is_taxed} onChange={e => setNewSource({...newSource, is_taxed: e.target.checked})} style={{ width: '18px', height: '18px' }} /><label htmlFor="taxedCheck" style={{ fontSize: '0.85rem', fontWeight: 800 }}>IS THIS TAXED?</label></div>
-                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--success-gradient)', height: '60px' }}>{newSource.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsSourceFormOpen(false); setNewSource({ id: null, name: '', amount: '', is_taxed: false, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
+                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--success-gradient)', height: '60px', color: 'var(--text) !important' }}>{newSource.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsSourceFormOpen(false); setNewSource({ id: null, name: '', amount: '', is_taxed: false, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
                 </form>
               )}
             </section>
@@ -384,16 +389,37 @@ const IncomePage: React.FC<IncomePageProps> = ({
         .mode-switcher { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 6px; border-radius: 12px; border: 1px solid var(--border); }
         .mode-switcher button { flex: 1; padding: 12px; border-radius: 10px; background: none; color: var(--text-muted); border: none; font-weight: 800; font-size: 0.85rem; transition: all 0.3s ease; cursor: pointer; }
         .mode-switcher button.active { background: var(--primary-gradient); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .primary-btn { 
+          background: var(--primary-gradient); 
+          width: 100%; 
+          font-weight: 900; 
+          margin-top: 10px; 
+          color: var(--text) !important; 
+          border: 1px solid rgba(0,0,0,0.1);
+          box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: all 0.2s ease;
+        }
+        .primary-btn:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+          filter: brightness(1.1);
+        }
+        .primary-btn:active {
+          transform: translateY(0);
+        }
         .ledger-row { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); padding: 8px 0; font-size: 0.95rem; }
         .ledger-row strong { color: var(--text); font-weight: 900; }
         .ledger-total { display: flex; justify-content: space-between; align-items: center; font-weight: 900; border-top: 2px solid var(--border); margin-top: 12px; paddingTop: 12px; font-size: 1.05rem; }
         .item-list { display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
-        .workflow-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 14px; transition: all 0.2s ease; }
+        .workflow-item { display: grid; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 14px; transition: all 0.2s ease; overflow: hidden; }
         .workflow-item:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
-        .remove-mini-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; opacity: 0.6; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
-        .remove-mini-btn:hover { color: var(--danger); opacity: 1; transform: scale(1.1); }
-        .edit-mini-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; opacity: 0.6; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
-        .edit-mini-btn:hover { color: var(--primary); opacity: 1; transform: scale(1.1); }
+        .remove-mini-btn { background: none; border: none; color: var(--text); cursor: pointer; opacity: 1; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
+        .remove-mini-btn:hover { color: var(--danger); transform: scale(1.1); }
+        .edit-mini-btn { background: none; border: none; color: var(--text); cursor: pointer; opacity: 1; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
+        .edit-mini-btn:hover { color: var(--primary); transform: scale(1.1); }
       `}</style>
     </div>
   );

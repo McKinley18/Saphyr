@@ -69,17 +69,19 @@
   font-weight: 900;
   letter-spacing: 0.1em;
   border-radius: 10px;
-  background: rgba(255,255,255,0.05);
+  background: var(--inactive-bg);
   border: 1px solid var(--border);
-  color: white; /* FIXED: Bold White */
+  color: var(--text) !important;
   cursor: pointer;
   transition: all 0.3s ease;
+  box-shadow: none;
+  margin-top: 0;
 }
 
 .architect-btn.active {
   background: var(--primary-gradient);
   border-color: transparent;
-  color: white;
+  color: white !important;
   box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
 }
 
@@ -90,10 +92,11 @@
   font-size: 0.65rem;
   font-weight: 900;
   border-radius: 10px;
-  background: rgba(255,255,255,0.05);
+  background: var(--inactive-bg);
   border: 1px solid var(--border);
-  color: white;
+  color: var(--text) !important;
   cursor: pointer;
+  box-shadow: none;
 }
 
 .theme-menu {
@@ -104,7 +107,7 @@
   background: var(--card);
   border: 1px solid var(--primary);
   padding: 6px;
-  box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+  box-shadow: 0 15px 40px rgba(0,0,0,0.4);
   border-radius: 14px;
   z-index: 1100;
 }
@@ -113,11 +116,12 @@
 .hamburger {
   width: 44px;
   height: 44px;
-  background: rgba(255,255,255,0.05);
+  background: var(--inactive-bg);
   border: 1px solid var(--border);
   border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; position: relative;
+  box-shadow: none;
 }
 
 .hamburger-box { width: 20px; height: 14px; position: relative; display: flex; align-items: center; justify-content: center; }
@@ -143,7 +147,7 @@
   border: 1px solid var(--primary);
   border-radius: 20px;
   padding: 10px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.8);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3);
   z-index: 2000;
   backdrop-filter: blur(30px);
   animation: dropdownFadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -181,7 +185,7 @@
   text-transform: uppercase;
   letter-spacing: 0.05em;
   text-align: center;
-  border-bottom: 1px solid rgba(255,255,255,0.02);
+  border-bottom: 1px solid var(--border);
 }
 
 .dropdown-link:last-child { border-bottom: none; }
@@ -195,7 +199,7 @@
 .dropdown-user-info {
   text-align: center;
   padding: 15px;
-  background: rgba(255,255,255,0.02);
+  background: var(--subtle-overlay);
   border-radius: 14px;
   margin-bottom: 10px;
 }
@@ -218,10 +222,10 @@
 }
 
 .secondary-row.centered {
-  background: rgba(255,255,255,0.03);
+  background: var(--subtle-overlay);
   padding: 8px 12px;
   border-radius: 12px;
-  border: 1px solid rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
   justify-content: center;
 }
 
