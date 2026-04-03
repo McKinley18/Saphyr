@@ -41,27 +41,58 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
 
   const accent = customColor || 'var(--primary)';
 
+  // THE SYMMETRY CONSTANTS (Pure Content, No Card Wrapper)
+  const GAP = '30px';
+  const labelStyle = { 
+    fontWeight: 900, 
+    fontSize: '0.75rem', 
+    color: 'var(--text-muted)', 
+    textTransform: 'uppercase' as const, 
+    letterSpacing: '0.12em',
+    marginBottom: '10px',
+    display: 'block'
+  };
+
+  const groupStyle = {
+    display: 'flex',
+    flexDirection: 'column' as const,
+    marginBottom: GAP
+  };
+
   return (
-    <div className="card" style={{ borderTop: `4px solid ${accent}`, borderLeft: `5px solid ${accent}`, background: 'var(--subtle-overlay)', padding: '35px', position: 'relative' }}>
-      {renderColorPicker && renderColorPicker()}
-      <h3 style={{ margin: '0 0 25px 0', fontSize: '1.1rem', fontWeight: 900, textAlign: 'center', color: 'var(--text)' }}>ADD PAYMENT</h3>
-      
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Description*</label>
-          <input required value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="e.g. Rent, Car Loan" />
+    <div className="bill-form-content">
+      <form onSubmit={handleSubmit}>
+        {/* ROW 1: DESCRIPTION */}
+        <div style={groupStyle}>
+          <label style={labelStyle}>Description*</label>
+          <input 
+            required 
+            value={formData.name} 
+            onChange={e => setFormData({...formData, name: e.target.value})} 
+            placeholder="e.g. Rent, Car Loan" 
+            style={{ padding: '18px 20px' }}
+          />
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Payment*</label>
+        {/* ROW 2: PAYMENT & DUE DATE */}
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+          <div style={groupStyle}>
+            <label style={labelStyle}>Payment*</label>
             <div className="currency-input-wrapper">
-              <span className="currency-prefix" style={{ color: accent }}>$</span>
-              <input required type="number" step="0.01" value={formData.balance} onChange={e => setFormData({...formData, balance: e.target.value})} placeholder="0.00" />
+              <span className="currency-prefix" style={{ color: accent, paddingLeft: '20px' }}>$</span>
+              <input 
+                required 
+                type="number" 
+                step="0.01" 
+                value={formData.balance} 
+                onChange={e => setFormData({...formData, balance: e.target.value})} 
+                placeholder="0.00" 
+                style={{ padding: '18px 20px', paddingLeft: '10px' }}
+              />
             </div>
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Due Date*</label>
+          <div style={groupStyle}>
+            <label style={labelStyle}>Due Date*</label>
             <div className="currency-input-wrapper" style={{ position: 'relative' }}>
               <input 
                 required 
@@ -71,11 +102,11 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
                 value={formData.due_day} 
                 onChange={e => setFormData({...formData, due_day: e.target.value})} 
                 placeholder="1-31" 
-                style={{ paddingRight: '45px' }}
+                style={{ padding: '18px 20px', paddingRight: '45px' }}
               />
               <span 
                 onClick={() => (document.getElementById('bill-date-helper') as any)?.showPicker()}
-                style={{ position: 'absolute', right: '12px', cursor: 'pointer', fontSize: '1.1rem', opacity: 0.6 }}
+                style={{ position: 'absolute', right: '15px', cursor: 'pointer', fontSize: '1.1rem', opacity: 0.6 }}
                 title="Open Calendar"
               >
                 📅
@@ -95,26 +126,49 @@ const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, custom
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Category</label>
-            <input list="bill-groups" value={formData.group_name} onChange={e => setFormData({...formData, group_name: e.target.value})} placeholder="e.g. Housing" />
+        {/* ROW 3: CATEGORY & APR */}
+        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+          <div style={groupStyle}>
+            <label style={labelStyle}>Category</label>
+            <input 
+              list="bill-groups" 
+              value={formData.group_name} 
+              onChange={e => setFormData({...formData, group_name: e.target.value})} 
+              placeholder="e.g. Housing" 
+              style={{ padding: '18px 20px' }}
+            />
             <datalist id="bill-groups">
-              {groups.map(g => <option key={g} value={g} />)}
+              {(groups || []).map(g => <option key={g} value={g} />)}
             </datalist>
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>APR (%)</label>
-            <input type="number" step="0.01" value={formData.apr} onChange={e => setFormData({...formData, apr: e.target.value})} placeholder="e.g. 5.5" />
+          <div style={groupStyle}>
+            <label style={labelStyle}>APR (%)</label>
+            <input 
+              type="number" 
+              step="0.01" 
+              value={formData.apr} 
+              onChange={e => setFormData({...formData, apr: e.target.value})} 
+              placeholder="e.g. 5.5" 
+              style={{ padding: '18px 20px' }}
+            />
           </div>
         </div>
 
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Total Loan Term (Months)</label>
-          <input type="number" value={formData.loan_term} onChange={e => setFormData({...formData, loan_term: e.target.value})} placeholder="e.g. 60" />
+        {/* ROW 4: LOAN TERM */}
+        <div style={groupStyle}>
+          <label style={labelStyle}>Total Loan Term (Months)</label>
+          <input 
+            type="number" 
+            value={formData.loan_term} 
+            onChange={e => setFormData({...formData, loan_term: e.target.value})} 
+            placeholder="e.g. 60" 
+            style={{ padding: '18px 20px' }}
+          />
         </div>
         
-        <button type="submit" style={{ background: accent, fontWeight: 900, boxShadow: `0 0 20px ${accent}` }}>SAVE PAYMENT</button>
+        <button type="submit" style={{ background: accent, fontWeight: 900, height: '60px', width: '100%', boxShadow: `0 0 25px ${accent}44`, marginTop: '10px' }}>
+          SAVE PAYMENT
+        </button>
       </form>
     </div>
   );

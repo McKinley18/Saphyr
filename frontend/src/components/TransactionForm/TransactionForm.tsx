@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { createTransaction } from '../../services/api';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TransactionFormProps {
   accounts: any[];
@@ -21,6 +22,8 @@ const CATEGORY_HEURISTICS: Record<string, string[]> = {
 const TransactionForm: React.FC<TransactionFormProps> = ({ 
   accounts, budgets, userId, onTransactionAdded, customColor 
 }) => {
+  const [visionQuery, setVisionQuery] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({
     amount: '',
     category: '',
@@ -31,123 +34,156 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     budget_category_id: ''
   });
 
-  const handleCategoryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    const lowerValue = value.toLowerCase();
+  // VISION NLP PARSER
+  useEffect(() => {
+    if (!visionQuery) return;
     
-    let suggestedBudgetId = formData.budget_category_id;
+    const query = visionQuery.toLowerCase();
+    const parts = query.split(' ');
     
-    // Run heuristic engine if a budget hasn't been manually forced yet
-    if (!suggestedBudgetId || suggestedBudgetId === '') {
-      for (const [budgetType, keywords] of Object.entries(CATEGORY_HEURISTICS)) {
-        if (keywords.some(k => lowerValue.includes(k))) {
-          // Find matching budget box by name
-          const match = budgets.find(b => b.name.toLowerCase().includes(budgetType.toLowerCase()));
-          if (match) {
-            suggestedBudgetId = match.id;
-            break;
-          }
+    let newAmount = formData.amount;
+    let newAccountId = formData.account_id;
+    let newBudgetId = formData.budget_category_id;
+    let newCategory = formData.category;
+
+    // 1. Parse Amount
+    const amountMatch = query.match(/\$?(\d+(\.\d{2})?)/);
+    if (amountMatch) newAmount = amountMatch[1];
+
+    // 2. Parse Account
+    const accMatch = accounts.find(a => query.includes(a.name.toLowerCase()));
+    if (accMatch) newAccountId = accMatch.id;
+
+    // 3. Parse Budget Box
+    const budgetMatch = budgets.find(b => query.includes(b.name.toLowerCase()));
+    if (budgetMatch) newBudgetId = budgetMatch.id;
+
+    // 4. Heuristic Category if not set
+    if (!newCategory) {
+      for (const [cat, keywords] of Object.entries(CATEGORY_HEURISTICS)) {
+        if (keywords.some(k => query.includes(k))) {
+          newCategory = cat;
+          const bMatch = budgets.find(b => b.name.toLowerCase().includes(cat.toLowerCase()));
+          if (bMatch) newBudgetId = bMatch.id;
+          break;
         }
       }
     }
 
-    setFormData({
-      ...formData, 
-      category: value,
-      budget_category_id: suggestedBudgetId
-    });
-  };
+    setFormData(prev => ({
+      ...prev,
+      amount: newAmount,
+      account_id: newAccountId,
+      budget_category_id: newBudgetId,
+      category: newCategory || prev.category
+    }));
+  }, [visionQuery, accounts, budgets]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsSubmitting(true);
     try {
-      await createTransaction({
-        ...formData,
-        user_id: userId,
-        amount: parseFloat(formData.amount)
-      });
-      setFormData({
-        amount: '',
-        category: '',
-        description: '',
-        date: new Date().toISOString().split('T')[0],
-        type: 'expense',
-        account_id: '',
-        budget_category_id: ''
-      });
+      await createTransaction({ ...formData, user_id: userId, amount: parseFloat(formData.amount) });
+      setFormData({ amount: '', category: '', description: '', date: new Date().toISOString().split('T')[0], type: 'expense', account_id: '', budget_category_id: '' });
+      setVisionQuery('');
       onTransactionAdded();
-    } catch (err) {
-      console.error("Transaction failed:", err);
-    }
+    } catch (err) { console.error("Transaction failed:", err); }
+    finally { setIsSubmitting(false); }
   };
 
   const accent = customColor || 'var(--primary)';
+  const labelStyle = { fontWeight: 900, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: '10px', display: 'block' };
+  const groupStyle = { display: 'flex', flexDirection: 'column' as const, marginBottom: '30px' };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-      <h3 style={{ margin: 0, fontWeight: 900, fontSize: '1.1rem', textAlign: 'center', color: 'var(--text)' }}>QUICK LOG</h3>
-      
-      <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1.5fr', gap: '15px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Amount</label>
-            <div className="currency-input-wrapper">
-              <span className="currency-prefix" style={{ color: accent }}>$</span>
+    <div className="transaction-form-content">
+      <form onSubmit={handleSubmit}>
+        {/* VISION ENTRY POINT */}
+        <div style={groupStyle}>
+          <label style={{ ...labelStyle, color: accent }}>SAPHYR VISION (NLP FORGE)</label>
+          <div style={{ position: 'relative' }}>
+            <input 
+              placeholder="e.g. Log $45.00 for Dinner at Shell on Credit Card" 
+              value={visionQuery}
+              onChange={e => setVisionQuery(e.target.value)}
+              style={{ padding: '20px 25px', border: `2px solid ${accent}`, background: `${accent}05 !important`, fontSize: '1rem', fontWeight: 700 }}
+            />
+            <div style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: '1.2rem' }}>✨</div>
+          </div>
+        </div>
+
+        <div style={{ padding: '20px', background: 'var(--subtle-overlay)', borderRadius: '16px', border: '1px solid var(--border)', marginBottom: '30px' }}>
+          {/* ROW 1: AMOUNT & MERCHANT */}
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1.5fr', gap: '30px' }}>
+            <div style={groupStyle}>
+              <label style={labelStyle}>Amount*</label>
+              <div className="currency-input-wrapper" style={{ borderColor: formData.amount ? accent : 'var(--border)' }}>
+                <span className="currency-prefix" style={{ color: accent, paddingLeft: '20px' }}>$</span>
+                <input 
+                  required 
+                  type="number" 
+                  step="0.01" 
+                  value={formData.amount} 
+                  onChange={e => setFormData({...formData, amount: e.target.value})} 
+                  placeholder="0.00"
+                  style={{ fontSize: '1.2rem', fontWeight: 900, color: accent, padding: '18px 20px', paddingLeft: '10px' }}
+                />
+              </div>
+            </div>
+            <div style={groupStyle}>
+              <label style={labelStyle}>Category / Merchant*</label>
               <input 
                 required 
-                type="number" 
-                step="0.01" 
-                value={formData.amount} 
-                onChange={e => setFormData({...formData, amount: e.target.value})} 
-                placeholder="0.00"
-                style={{ fontSize: '1.2rem', fontWeight: 900, color: accent }}
+                value={formData.category} 
+                onChange={e => setFormData({...formData, category: e.target.value})} 
+                placeholder="e.g. Walmart, Rent"
+                style={{ padding: '18px 20px', borderColor: formData.category ? accent : 'var(--border)' }}
               />
             </div>
           </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Category / Merchant</label>
+
+          {/* ROW 2: ACCOUNT & BUDGET BOX */}
+          <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+            <div style={groupStyle}>
+              <label style={labelStyle}>Source Account*</label>
+              <select required value={formData.account_id} onChange={e => setFormData({...formData, account_id: e.target.value})} style={{ padding: '18px 20px', borderColor: formData.account_id ? accent : 'var(--border)' }}>
+                <option value="">-- Source --</option>
+                {accounts.filter(a => !a.is_bill).map(a => (
+                  <option key={a.id} value={a.id}>{a.name}</option>
+                ))}
+              </select>
+            </div>
+            <div style={groupStyle}>
+              <label style={labelStyle}>Budget Box</label>
+              <select value={formData.budget_category_id} onChange={e => setFormData({...formData, budget_category_id: e.target.value})} style={{ padding: '18px 20px', borderColor: formData.budget_category_id ? accent : 'var(--border)' }}>
+                <option value="">-- No Box --</option>
+                {budgets.map(b => (
+                  <option key={b.id} value={b.id}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* ROW 3: DATE */}
+          <div style={{ ...groupStyle, marginBottom: 0 }}>
+            <label style={labelStyle}>Transaction Date</label>
             <input 
-              required 
-              value={formData.category} 
-              onChange={handleCategoryChange} 
-              placeholder="e.g. Walmart, Rent"
+              type="date" 
+              value={formData.date} 
+              onChange={e => setFormData({...formData, date: e.target.value})} 
+              onClick={(e) => (e.currentTarget as any).showPicker?.()}
+              style={{ cursor: 'pointer', padding: '18px 20px' }}
             />
           </div>
         </div>
 
-        <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Account</label>
-            <select required value={formData.account_id} onChange={e => setFormData({...formData, account_id: e.target.value})}>
-              <option value="">-- Source --</option>
-              {accounts.filter(a => !a.is_bill).map(a => (
-                <option key={a.id} value={a.id}>{a.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="form-group" style={{ marginBottom: 0 }}>
-            <label>Budget Box</label>
-            <select value={formData.budget_category_id} onChange={e => setFormData({...formData, budget_category_id: e.target.value})}>
-              <option value="">-- No Box --</option>
-              {budgets.map(b => (
-                <option key={b.id} value={b.id}>{b.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="form-group" style={{ marginBottom: 0 }}>
-          <label>Date</label>
-          <input 
-            type="date" 
-            value={formData.date} 
-            onChange={e => setFormData({...formData, date: e.target.value})} 
-            onClick={(e) => (e.currentTarget as any).showPicker?.()}
-            style={{ cursor: 'pointer' }}
-          />
-        </div>
-
-        <button type="submit" style={{ background: accent, fontWeight: 900, boxShadow: `0 0 20px ${accent}` }}>LOG TRANSACTION</button>
+        <button 
+          type="submit" 
+          disabled={isSubmitting}
+          style={{ background: accent, fontWeight: 900, height: '60px', width: '100%', boxShadow: `0 0 25px ${accent}44`, marginTop: '10px' }}
+        >
+          {isSubmitting ? 'SYNCING...' : 'LOG TRANSACTION'}
+        </button>
       </form>
     </div>
   );

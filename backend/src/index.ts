@@ -88,6 +88,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 
 // Startup: Ensure default user exists (Safeguard)
 import db from './database/db.js';
+import { TaxService } from './services/TaxService.js';
 const USER_ID = '00000000-0000-0000-0000-000000000000';
 
 const ensureDefaultUser = async () => {
@@ -102,6 +103,9 @@ const ensureDefaultUser = async () => {
       });
       console.log("🛡️ Root system user verified");
     }
+    
+    // Auto-seed tax brackets on startup
+    await TaxService.seed2025Brackets();
   } catch (e) {
     console.error("❌ Security context failure:", e);
   }

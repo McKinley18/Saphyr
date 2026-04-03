@@ -15,6 +15,7 @@
     "@dnd-kit/utilities": "^3.2.2",
     "@types/json2csv": "^5.0.7",
     "chart.js": "^4.5.1",
+    "framer-motion": "^12.38.0",
     "html2canvas": "^1.4.1",
     "json2csv": "^6.0.0-alpha.2",
     "jspdf": "^4.2.1",

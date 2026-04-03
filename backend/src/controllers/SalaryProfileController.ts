@@ -70,6 +70,7 @@ export class SalaryProfileController {
       if (manual_tax_amount !== undefined) profileData.manual_tax_amount = parseFloat(manual_tax_amount) || 0;
       if (use_manual_tax !== undefined) profileData.use_manual_tax = !!use_manual_tax;
       if (state !== undefined) profileData.state = state;
+      if (req.body.account_id !== undefined) profileData.account_id = req.body.account_id || null;
 
       const existingSal = await db('salary_profiles').where({ user_id: userId }).first();
       
@@ -88,8 +89,21 @@ export class SalaryProfileController {
         }
       }
       
-      const newEstimate = await TaxService.calculateTaxEstimate(userId as string, 2025);
-      res.json({ message: 'Profile updated', taxEstimate: newEstimate });
+      // CRITICAL FIX: Pass profileData directly to ensure calculation is based on current submission
+      const newEstimate = await TaxService.calculateTaxEstimate(userId as string, 2025, { ...profileData, filing_status });
+      const updatedProfile = await db('salary_profiles').where({ user_id: userId }).orderBy('updated_at', 'desc').first();
+      const taxProfile = await db('tax_profiles').where({ user_id: userId }).first();
+      
+      res.json({ 
+        message: 'Profile updated', 
+        taxEstimate: newEstimate,
+        salaryProfile: {
+          ...updatedProfile,
+          '401k_percent': (Number(updatedProfile['401k_percent']) || 0) * 100,
+          filing_status: taxProfile?.filing_status || filing_status,
+          state: updatedProfile?.state || state
+        }
+      });
     } catch (error: any) {
       console.error("Update Error:", error);
       res.status(500).json({ error: error.message });
@@ -99,13 +113,14 @@ export class SalaryProfileController {
   static async addCustomDeduction(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
-      const { name, amount, is_pre_tax, frequency } = req.body;
+      const { name, amount, is_pre_tax, frequency, account_id } = req.body;
       await db('custom_deductions').insert({
         user_id: userId,
         name,
         amount: parseFloat(amount) || 0,
         is_pre_tax: !!is_pre_tax,
-        frequency: frequency || 'monthly'
+        frequency: frequency || 'monthly',
+        account_id: account_id || null
       });
       const newEstimate = await TaxService.calculateTaxEstimate(userId as string);
       res.json({ message: 'Deduction added', taxEstimate: newEstimate });

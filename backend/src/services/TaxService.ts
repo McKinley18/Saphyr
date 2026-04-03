@@ -91,9 +91,10 @@ export class TaxService {
         .filter((d: any) => !d.is_pre_tax)
         .reduce((sum: number, d: any) => sum + (Number(d.amount) * this.getAnnualMultiplier(d.frequency)), 0);
 
-      const totalActualGross = totalTaxableGross + additionalNonTaxableIncome;
-      const totalTaxesAndDeductions = federalTax + stateTax + totalFica + deduction401k + totalPreTaxDeductions + postTaxDeductions;
+      const totalTaxLiability = federalTax + stateTax + totalFica;
+      const totalTaxesAndDeductions = totalTaxLiability + deduction401k + totalPreTaxDeductions + postTaxDeductions;
       const netAnnualIncome = totalActualGross - totalTaxesAndDeductions;
+      const totalEffectiveRate = totalActualGross > 0 ? (totalTaxLiability / totalActualGross) : 0;
 
       return {
         year,
@@ -112,11 +113,11 @@ export class TaxService {
         state_tax: stateTax,
         fica_tax: totalFica,
         fica_breakdown: { social_security: ficaSocialSecurity, medicare: ficaMedicare },
-        total_tax_liability: federalTax + stateTax + totalFica,
+        total_tax_liability: totalTaxLiability,
         use_manual_tax: !!salaryProfile?.use_manual_tax,
         net_annual: netAnnualIncome,
         monthly_net: netAnnualIncome / 12,
-        effective_rate: totalActualGross > 0 ? ((federalTax + stateTax + totalFica) / totalActualGross) : 0,
+        effective_rate: totalEffectiveRate,
         last_calc: new Date().toISOString()
       };
     } catch (error: any) {
@@ -126,6 +127,41 @@ export class TaxService {
   }
 
   static async seed2025Brackets() {
-    // Brackets logic unchanged...
+    const year = 2025;
+    const brackets = [
+      // SINGLE
+      { region: 'federal', filing_status: 'single', lower_bound: 0, upper_bound: 11925, rate: 0.10, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 11925, upper_bound: 48475, rate: 0.12, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 48475, upper_bound: 103350, rate: 0.22, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 103350, upper_bound: 197300, rate: 0.24, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 197300, upper_bound: 250525, rate: 0.32, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 250525, upper_bound: 626350, rate: 0.35, year },
+      { region: 'federal', filing_status: 'single', lower_bound: 626350, upper_bound: null, rate: 0.37, year },
+
+      // MARRIED FILING JOINTLY
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 0, upper_bound: 23850, rate: 0.10, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 23850, upper_bound: 96950, rate: 0.12, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 96950, upper_bound: 206700, rate: 0.22, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 206700, upper_bound: 394600, rate: 0.24, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 394600, upper_bound: 501050, rate: 0.32, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 501050, upper_bound: 751600, rate: 0.35, year },
+      { region: 'federal', filing_status: 'married_joint', lower_bound: 751600, upper_bound: null, rate: 0.37, year },
+
+      // HEAD OF HOUSEHOLD
+      { region: 'federal', filing_status: 'head_household', lower_bound: 0, upper_bound: 17000, rate: 0.10, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 17000, upper_bound: 64850, rate: 0.12, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 64850, upper_bound: 103350, rate: 0.22, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 103350, upper_bound: 197300, rate: 0.24, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 197300, upper_bound: 250525, rate: 0.32, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 250525, upper_bound: 626350, rate: 0.35, year },
+      { region: 'federal', filing_status: 'head_household', lower_bound: 626350, upper_bound: null, rate: 0.37, year }
+    ];
+
+    await db.transaction(async trx => {
+      await trx('tax_brackets').where({ year }).del();
+      await trx('tax_brackets').insert(brackets);
+    });
+    
+    console.log('✅ IRS 2025 Brackets Seeded Successfully.');
   }
 }

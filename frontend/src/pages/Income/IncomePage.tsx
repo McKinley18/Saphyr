@@ -1,21 +1,58 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { useModal } from '../../context/ModalContext';
 import { useAuth } from '../../context/AuthContext';
 import { 
   createIncomeSource, 
   deleteIncomeSource,
+  updateIncomeSource,
   addDeduction,
   deleteDeduction,
-  resetAccountApi
+  updateDeduction,
 } from '../../services/api';
-import { jsPDF } from 'jspdf';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors
+} from '@dnd-kit/core';
+import type { DragEndEvent } from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+
+interface SortableItemProps {
+  id: string;
+  children: React.ReactNode;
+  isEditMode: boolean;
+}
+
+const SortableItem: React.FC<SortableItemProps> = ({ id, children, isEditMode }) => {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id, disabled: !isEditMode });
+  const style = { transform: CSS.Transform.toString(transform), transition, zIndex: isDragging ? 100 : 1, position: 'relative' as const, opacity: isDragging ? 0.8 : 1 };
+  return (
+    <div ref={setNodeRef} style={style}>
+      {isEditMode && (
+        <div {...attributes} {...listeners} style={{ position: 'absolute', top: '15px', left: '15px', cursor: 'grab', zIndex: 20, background: 'rgba(0,0,0,0.5)', padding: '4px 8px', borderRadius: '10px', border: '1px solid var(--border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>⋮</div>
+      )}
+      {children}
+    </div>
+  );
+};
 
 interface IncomePageProps {
   userId: string;
   savedSalary: any; 
   taxEstimate: any;
   incomeSources: any[];
+  accounts: any[];
   handleSalarySubmit: (e: any, status: string, extraData?: any) => void;
   loadData: () => void;
 }
@@ -36,68 +73,75 @@ const US_STATES = [
   { code: 'WV', name: 'West Virginia' }, { code: 'WY', name: 'Wyoming' }
 ];
 
-const ACCENT_OPTIONS = ['var(--primary)', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#fb7185', '#64748b'];
+const ACCENT_OPTIONS = ['#3b82f6', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#fb7185', '#64748b'];
 
 const IncomePage: React.FC<IncomePageProps> = ({ 
-  userId, savedSalary, taxEstimate, incomeSources, handleSalarySubmit, loadData
+  userId, savedSalary, taxEstimate, incomeSources, accounts, handleSalarySubmit, loadData
 }) => {
   const { confirm } = useModal();
   const { isEditMode } = useAuth();
-  const [activeStep, setActiveStep] = useState<number>(1);
-  const [isSpecsExpanded, setIsSpecsExpanded] = useState(false);
+
   const [localFilingStatus, setLocalFilingStatus] = useState('');
   const [localState, setLocalState] = useState('');
-  const [isHourly, setIsHourly] = useState(savedSalary?.is_hourly || false);
+  const [isHourly, setIsHourly] = useState(false);
   const [hourlyRate, setHourlyRate] = useState(0);
-  const [hoursPerWeek, setHoursPerWeek] = useState(0);
+  const [hoursPerWeek, setHoursPerWeek] = useState(40);
   const [annualGross, setAnnualGross] = useState(0);
+  const [salaryAccountId, setSalaryAccountId] = useState('');
   const [pct401k, setPct401k] = useState(0);
-  const [useManualTax, setUseManualTax] = useState(savedSalary?.use_manual_tax || false);
-  const [manualTaxAmount, setManualTaxAmount] = useState(0);
   
-  const [newDeduction, setNewDeduction] = useState({ name: '', amount: '', is_pre_tax: true, frequency: 'monthly' });
-  const [newSource, setNewSource] = useState({ name: '', amount: '', is_taxed: false, frequency: 'monthly' });
+  const [newDeduction, setNewDeduction] = useState({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' });
+  const [newSource, setNewSource] = useState({ id: null, name: '', amount: '', is_taxed: false, frequency: 'monthly', account_id: '' });
   
+  const [isDeductionFormOpen, setIsDeductionFormOpen] = useState(false);
+  const [isSourceFormOpen, setIsSourceFormOpen] = useState(false);
+
   const [syncMessage, setSyncMessage] = useState('');
-  const [isPulsing, setIsPulsing] = useState(false);
+  const [hasInitialPopulated, setHasInitialPopulated] = useState(false);
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
-    const saved = localStorage.getItem('saphyr_income_colors');
+    const saved = localStorage.getItem('saphyr_income_colors_v2');
     return saved ? JSON.parse(saved) : {};
+  });
+
+  const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
+    const saved = localStorage.getItem('saphyr_income_layout');
+    return saved ? JSON.parse(saved) : ['assessment', 'forge', 'ribbon', 'modules', 'log'];
   });
 
   const handleColorChange = (id: string, color: string) => {
     const newColors = { ...boxColors, [id]: color };
     setBoxColors(newColors);
-    localStorage.setItem('saphyr_income_colors', JSON.stringify(newColors));
+    localStorage.setItem('saphyr_income_colors_v2', JSON.stringify(newColors));
   };
 
-  useEffect(() => {
-    if (savedSalary) {
-      setIsHourly(savedSalary.is_hourly || false);
-      setUseManualTax(savedSalary.use_manual_tax || false);
-      
-      // Auto-populate form fields from saved data
-      if (savedSalary.is_hourly) {
-        setHourlyRate(savedSalary.hourly_rate || 0);
-        setHoursPerWeek(savedSalary.hours_per_week || 0);
-      } else {
-        setAnnualGross(savedSalary.annual_salary || 0);
-      }
-      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
-      setManualTaxAmount(savedSalary.manual_tax_amount || 0);
-      setLocalFilingStatus(savedSalary.filing_status || '');
-      setLocalState(savedSalary.state || '');
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (over && active.id !== over.id) {
+      setLayoutOrder((items) => {
+        const oldIndex = items.indexOf(active.id as string);
+        const newIndex = items.indexOf(over.id as string);
+        const newOrder = arrayMove(items, oldIndex, newIndex);
+        localStorage.setItem('saphyr_income_layout', JSON.stringify(newOrder));
+        return newOrder;
+      });
     }
-  }, [savedSalary]);
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => {
-    if (taxEstimate) {
-      setIsPulsing(true);
-      const timer = setTimeout(() => setIsPulsing(false), 1000);
-      return () => clearTimeout(timer);
+    if (savedSalary && !hasInitialPopulated) {
+      setIsHourly(!!savedSalary.is_hourly);
+      if (savedSalary.is_hourly) { setHourlyRate(savedSalary.hourly_rate || 0); setHoursPerWeek(savedSalary.hours_per_week || 40); } 
+      else { setAnnualGross(savedSalary.annual_salary || 0); }
+      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
+      setLocalFilingStatus(savedSalary.filing_status || '');
+      setLocalState(savedSalary.state || '');
+      setSalaryAccountId(savedSalary.account_id || '');
+      setHasInitialPopulated(true);
     }
-  }, [taxEstimate]);
+  }, [savedSalary, hasInitialPopulated]);
 
   const safeFormat = (val: any) => {
     const num = parseFloat(val || '0');
@@ -105,379 +149,222 @@ const IncomePage: React.FC<IncomePageProps> = ({
   };
 
   const onSaveProfile = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!localFilingStatus || !localState) {
-      await confirm({ title: 'Selection Required', message: 'Please select both a Filing Status and Residing State before syncing.', confirmLabel: 'UNDERSTOOD' });
-      return;
-    }
-    const payload = {
-      is_hourly: isHourly,
-      hourly_rate: isHourly ? (Number(hourlyRate) || savedSalary?.hourly_rate) : 0,
-      hours_per_week: isHourly ? (Number(hoursPerWeek) || savedSalary?.hours_per_week) : 0,
-      annual_salary: !isHourly ? (Number(annualGross) || savedSalary?.annual_salary) : (Number(hourlyRate) * (Number(hoursPerWeek) || 40) * 52),
-      contribution_401k_percent: Number(pct401k) / 100,
-      use_manual_tax: useManualTax,
-      manual_tax_amount: Number(manualTaxAmount) || savedSalary?.manual_tax_amount,
-      state: localState,
-      filing_status: localFilingStatus
-    };
-    handleSalarySubmit(e, localFilingStatus, payload);
-    setSyncMessage('CHANGES SYNCHRONIZED');
-    setActiveStep(2); 
+    if (e && e.preventDefault) e.preventDefault();
+    const calculatedAnnual = isHourly ? (Number(hourlyRate) * Number(hoursPerWeek) * 52) : Number(annualGross);
+    const payload = { is_hourly: isHourly, hourly_rate: isHourly ? Number(hourlyRate) : 0, hours_per_week: isHourly ? Number(hoursPerWeek) : 40, annual_salary: calculatedAnnual, contribution_401k_percent: Number(pct401k) / 100, state: localState, filing_status: localFilingStatus, account_id: salaryAccountId || null };
+    setSyncMessage('SYNCING...');
+    await handleSalarySubmit(e, localFilingStatus, payload);
+    setSyncMessage('PROFILE UPDATED');
     setTimeout(() => setSyncMessage(''), 3000);
   };
 
-  const handleResetIncomeOnly = async () => {
-    const isConfirmed = await confirm({ title: 'Reset Architect', message: 'This will clear your salary, tax profile, and deductions to allow a fresh start. Proceed?', confirmLabel: 'RESET ARCHITECT', isDanger: true });
-    if (isConfirmed) {
-      try {
-        await resetAccountApi();
-        setSyncMessage('ARCHITECT RESET COMPLETE');
-        loadData();
-        setTimeout(() => window.location.reload(), 1500);
-      } catch (err) { await confirm({ title: 'Error', message: 'Reset failed. Please try again.' }); }
+  const handleEditDeduction = (d: any) => { setNewDeduction({ id: d.id, name: d.name, amount: d.amount.toString(), is_pre_tax: !!d.is_pre_tax, frequency: d.frequency, account_id: d.account_id || '' }); setIsDeductionFormOpen(true); setTimeout(() => { document.getElementById('deduction-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); };
+  const handleEditSource = (s: any) => { setNewSource({ id: s.id, name: s.name, amount: s.amount.toString(), is_taxed: !!s.is_taxed, frequency: s.frequency, account_id: s.account_id || '' }); setIsSourceFormOpen(true); setTimeout(() => { document.getElementById('source-form')?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100); };
+
+  const onDeductionSubmit = async (e: React.FormEvent) => { e.preventDefault(); try { if (newDeduction.id) { await updateDeduction(newDeduction.id, newDeduction); } else { await addDeduction(newDeduction); } setNewDeduction({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' }); setIsDeductionFormOpen(false); loadData(); } catch (err) { console.error(err); } };
+  const onSourceSubmit = async (e: React.FormEvent) => { e.preventDefault(); try { if (newSource.id) { await updateIncomeSource(newSource.id, newSource); } else { await createIncomeSource({ ...newSource, user_id: userId }); } setNewSource({ id: null, name: '', amount: '', is_taxed: false, frequency: 'monthly', account_id: '' }); setIsSourceFormOpen(false); loadData(); } catch (err) { console.error(err); } };
+
+  const rawGross = Number(savedSalary?.annual_salary) || 0;
+  const monthlyGross = rawGross / 12;
+  const raw401kPct = (Number(savedSalary?.contribution_401k_percent) || 0);
+  const rawState = savedSalary?.state || 'WA';
+  const rawFiling = savedSalary?.filing_status || 'single';
+
+  const monthly401k = (rawGross * raw401kPct) / 12;
+  const preTaxDeductionsMonthly = (savedSalary?.custom_deductions || []).filter((d: any) => d.is_pre_tax).reduce((sum: number, d: any) => sum + (Number(d.amount) * (d.frequency === 'weekly' ? 52/12 : d.frequency === 'bi-weekly' ? 26/12 : 1)), 0);
+  const totalMonthlyPreTax = monthly401k + preTaxDeductionsMonthly;
+
+  const taxedOtherIncomeAnnual = (incomeSources || []).filter(s => s.is_taxed === true).reduce((sum, s) => sum + (parseFloat(s.amount) * (s.frequency === 'weekly' ? 52 : s.frequency === 'bi-weekly' ? 26 : 12)), 0);
+  const standardDeduction = (rawFiling === 'married_joint' || rawFiling === 'widow') ? 30000 : 15000;
+  const taxableIncome = Math.max(0, rawGross + taxedOtherIncomeAnnual - (totalMonthlyPreTax * 12) - standardDeduction);
+  const monthlyFica = (Math.min(rawGross + taxedOtherIncomeAnnual, 176100) * 0.0765) / 12;
+
+  let annualFedTax = 0;
+  if (taxableIncome > 0) {
+    if (rawFiling === 'single') {
+      if (taxableIncome <= 11925) annualFedTax = taxableIncome * 0.10;
+      else if (taxableIncome <= 48475) annualFedTax = 1192.50 + (taxableIncome - 11925) * 0.12;
+      else if (taxableIncome <= 103350) annualFedTax = 5578.50 + (taxableIncome - 48475) * 0.22;
+      else annualFedTax = 17651 + (taxableIncome - 103350) * 0.24;
+    } else {
+      if (taxableIncome <= 23850) annualFedTax = taxableIncome * 0.10;
+      else if (taxableIncome <= 96950) annualFedTax = 2385 + (taxableIncome - 23850) * 0.12;
+      else annualFedTax = 11157 + (taxableIncome - 96950) * 0.22;
     }
-  };
+  }
+  const monthlyFedTax = annualFedTax / 12;
+  const noTaxStates = ['AK','FL','NV','SD','TN','TX','WA','WY'];
+  const monthlyStateTax = noTaxStates.includes(rawState) ? 0 : (taxableIncome * 0.05) / 12;
+  const totalMonthlyTaxes = monthlyFedTax + monthlyFica + monthlyStateTax;
 
-  const onAddDeduction = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await addDeduction(newDeduction);
-    setNewDeduction({ name: '', amount: '', is_pre_tax: true, frequency: 'monthly' });
-    loadData();
-  };
-
-  const onAddSource = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await createIncomeSource({ ...newSource, user_id: userId });
-    setNewSource({ name: '', amount: '', is_taxed: false, frequency: 'monthly' });
-    loadData();
-  };
-
-  const handleExportBlueprint = async () => {
-    const doc = new jsPDF();
-    doc.setFontSize(22); doc.setTextColor(59, 130, 246);
-    doc.text('SAPHYR INCOME BLUEPRINT', 105, 20, { align: 'center' });
-    doc.setFontSize(10); doc.setTextColor(100, 116, 139);
-    doc.text(`Generated on: ${new Date().toLocaleString()}`, 105, 30, { align: 'center' });
-    doc.save(`saphyr_income_blueprint_${new Date().toISOString().split('T')[0]}.pdf`);
-  };
-
-  const totalOtherIncome = (incomeSources || []).reduce((sum, s) => {
+  const postTaxDeductionsMonthly = (savedSalary?.custom_deductions || []).filter((d: any) => !d.is_pre_tax).reduce((sum: number, d: any) => sum + (Number(d.amount) * (d.frequency === 'weekly' ? 52/12 : d.frequency === 'bi-weekly' ? 26/12 : 1)), 0);
+  const totalOtherIncomeMonthly = (incomeSources || []).reduce((sum, s) => {
     const amt = parseFloat(s.amount);
-    const multiplier = s.frequency === 'weekly' ? (52/12) : (s.frequency === 'bi-weekly' ? (26/12) : 1);
-    return sum + (amt * multiplier);
+    const mult = s.frequency === 'weekly' ? (52/12) : (s.frequency === 'bi-weekly' ? (26/12) : 1);
+    return sum + (amt * mult);
   }, 0);
-  
-  const totalVerifiedNetMonthly = (taxEstimate?.monthly_net || 0) + totalOtherIncome;
+
+  const monthlyNetTakeHome = monthlyGross + totalOtherIncomeMonthly - totalMonthlyTaxes - totalMonthlyPreTax - postTaxDeductionsMonthly;
 
   const renderColorPicker = (id: string) => (
     isEditMode && (
       <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.5)', padding: '4px', borderRadius: '20px', border: '1px solid var(--border)' }}>
         {ACCENT_OPTIONS.map(c => (
-          <button key={c} onClick={() => handleColorChange(id, c)} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: (boxColors[id] || 'var(--primary)') === c ? '1.5px solid white' : 'none', cursor: 'pointer', padding: 0, marginTop: 0 }} />
+          <button key={c} type="button" onClick={() => handleColorChange(id, c)} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: (boxColors[id] || '#3b82f6') === c ? '1.5px solid white' : 'none', cursor: 'pointer', padding: 0 }} />
         ))}
       </div>
     )
   );
 
-  return (
-    <div className="income-page">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px', gap: '20px', flexWrap: 'wrap' }}>
-        <UserGuide guideKey="income_v7" title="Income Architect">
-          <p>Your financial command deck. Follow the steps to build your net wealth projection.</p>
-        </UserGuide>
-      </div>
+  const labelStyle = { fontWeight: 900, fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase' as const, letterSpacing: '0.12em', marginBottom: '10px', display: 'block' };
+  const groupStyle = { display: 'flex', flexDirection: 'column' as const, marginBottom: '30px' };
 
-      <div className="tech-specs-bar">
-        <div className="spec-gauge">
-          <label>Monthly</label>
-          <div className="gauge-val">${safeFormat(taxEstimate?.annual_salary / 12)}</div>
-        </div>
-        <div className="spec-gauge">
-          <label>Hourly</label>
-          <div className="gauge-val">${safeFormat(taxEstimate?.hourly_rate)}</div>
-        </div>
-        <div className="spec-gauge">
-          <label>Tax Rate</label>
-          <div className="gauge-val">{((taxEstimate?.effective_rate || 0) * 100).toFixed(1)}%</div>
-        </div>
-      </div>
-
-      {syncMessage && <div className="sync-banner">{syncMessage}</div>}
-
-      <div className="income-grid-layout">
-        
-        <div className="workflow-column">
-          {/* STEP 1: EARNINGS */}
-          <div className={`workflow-step ${activeStep === 1 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(1)} style={{ borderColor: 'var(--primary)', color: 'var(--text)' }}>1</div>
-            <section className="card" onClick={() => activeStep !== 1 && setActiveStep(1)} style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)', background: 'var(--subtle-overlay)', position: 'relative' }}>
-              {renderColorPicker('step1')}
-              <div className="step-header">
-                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                  <span>EARNINGS:</span>
-                  <span style={{ color: 'var(--primary)' }}>${safeFormat(taxEstimate?.annual_salary)}/YR</span>
-                </h3>
-              </div>
-              
-              {activeStep === 1 && (
-                <div className="step-content-expanded">
-                  <div className="mode-switcher" style={{ marginBottom: '30px' }}>
-                    <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''} style={!isHourly ? { background: 'var(--primary-gradient)', boxShadow: '0 0 15px var(--primary)' } : {}}>SALARY</button>
-                    <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''} style={isHourly ? { background: 'var(--primary-gradient)', boxShadow: '0 0 15px var(--primary)' } : {}}>HOURLY</button>
-                  </div>
-
-                  <form onSubmit={onSaveProfile} className="workflow-form" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-                    {isHourly ? (
-                      <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                        <div className="form-group">
-                          <label>Hourly Rate</label>
-                          <div className="currency-input-wrapper" style={{ borderColor: boxColors['step1'] || 'var(--border)' }}>
-                            <span className="currency-prefix" style={{ color: boxColors['step1'] || 'var(--primary)' }}>$</span>
-                            <input type="number" step="0.01" value={hourlyRate || ''} placeholder="0.00" onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} />
-                          </div>
-                        </div>
-                        <div className="form-group"><label>Hours / Week</label><input type="number" value={hoursPerWeek || ''} placeholder="40" onChange={e => setHoursPerWeek(parseInt(e.target.value) || 0)} style={{ borderColor: boxColors['step1'] || 'var(--border)' }} /></div>
-                      </div>
-                    ) : (
-                      <div className="form-group">
-                        <label>Annual Gross Salary</label>
-                        <div className="currency-input-wrapper" style={{ borderColor: boxColors['step1'] || 'var(--border)' }}>
-                          <span className="currency-prefix" style={{ color: boxColors['step1'] || 'var(--primary)' }}>$</span>
-                          <input type="number" value={annualGross || ''} placeholder="0.00" onChange={e => setAnnualGross(parseFloat(e.target.value) || 0)} />
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                      <div className="form-group" style={{ marginBottom: 0 }}><label>Filing Status</label><select value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}><option value="">-- Select --</option><option value="single">Single</option><option value="married_joint">Married Filing Jointly</option><option value="married_separate">Married Filing Separately</option><option value="head_household">Head of Household</option><option value="widow">Qualifying Surviving Spouse</option></select></div>
-                      <div className="form-group" style={{ marginBottom: 0 }}><label>Residing State</label><select value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
-                    </div>
-                    <button type="submit" className="primary-btn">SYNC EARNINGS</button>
-                  </form>
-                </div>
-              )}
-            </section>
+  const sections = {
+    assessment: (
+      <SortableItem key="assessment" id="assessment" isEditMode={isEditMode}>
+        <section className="card" style={{ background: 'var(--primary-gradient)', textAlign: 'center', padding: '15px 20px', borderRadius: '20px', border: 'none', maxWidth: '500px', margin: '0 auto', '--local-accent': '#3b82f6' } as any}>
+          <h3 style={{ fontSize: '1rem', fontWeight: 900, color: 'rgba(255,255,255,0.9)', letterSpacing: '0.3em', marginBottom: '5px', textTransform: 'uppercase' }}>Verified Monthly Net</h3>
+          <div className="currency" style={{ fontSize: '2.4rem', fontWeight: 900, color: 'white', lineHeight: 1 }}>${safeFormat(monthlyNetTakeHome)}</div>
+          <div className="currency" style={{ fontSize: '0.85rem', fontWeight: 800, color: 'rgba(255,255,255,0.6)', marginTop: '4px' }}>≈ ${safeFormat(monthlyNetTakeHome * 12)} ANNUALLY</div>
+        </section>
+      </SortableItem>
+    ),
+    forge: (
+      <SortableItem key="forge" id="forge" isEditMode={isEditMode}>
+        <section className="card" style={{ borderTop: `5px solid ${boxColors['income'] || '#3b82f6'}`, borderLeft: `5px solid ${boxColors['income'] || '#3b82f6'}`, '--local-accent': boxColors['income'] || '#3b82f6', padding: '45px' } as any}>
+          {renderColorPicker('income')}
+          <div style={{ fontSize: '1rem', fontWeight: 900, color: boxColors['income'] || 'var(--primary)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Income Architect</div>
+          <div className="mode-switcher" style={{ marginBottom: '30px' }}>
+            <button type="button" onClick={() => setIsHourly(false)} className={!isHourly ? 'active' : ''}>SALARY</button>
+            <button type="button" onClick={() => setIsHourly(true)} className={isHourly ? 'active' : ''}>HOURLY</button>
           </div>
-
-          {/* STEP 2: DEDUCTIONS */}
-          <div className={`workflow-step ${activeStep === 2 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(2)} style={{ borderColor: 'var(--warning)', color: 'var(--text)' }}>2</div>
-            <section className="card" onClick={() => activeStep !== 2 && setActiveStep(2)} style={{ borderTop: '4px solid var(--warning)', borderLeft: '5px solid var(--warning)', background: 'var(--subtle-overlay)', position: 'relative' }}>
-              {renderColorPicker('step2')}
-              <div className="step-header">
-                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                  <span>DEDUCTIONS:</span>
-                  <span style={{ color: 'var(--warning)' }}>-${safeFormat((taxEstimate?.deduction_401k + taxEstimate?.total_pre_tax_deductions) / 12)}/MO</span>
-                </h3>
+          <form onSubmit={onSaveProfile}>
+            {isHourly ? (
+              <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                <div style={groupStyle}><label style={labelStyle}>Hourly Rate</label><div className="currency-input-wrapper"><span className="currency-prefix currency" style={{ color: boxColors['income'] || 'var(--primary)', paddingLeft: '20px' }}>$</span><input className="currency" style={{ padding: '18px 20px', paddingLeft: '10px' }} type="number" step="0.01" value={hourlyRate || ''} onChange={e => setHourlyRate(parseFloat(e.target.value) || 0)} /></div></div>
+                <div style={groupStyle}><label style={labelStyle}>Hours/Week</label><input style={{ padding: '18px 20px' }} type="number" value={hoursPerWeek || ''} onChange={e => setHoursPerWeek(parseInt(e.target.value) || 0)} /></div>
               </div>
-              
-              {activeStep === 2 && (
-                <div className="step-content-expanded">
-                  <div className="form-group" style={{ marginBottom: '30px' }}>
-                    <label>401k Contribution (%)</label>
-                    <div style={{ display: 'flex', gap: '10px' }}>
-                      <input type="number" value={pct401k || ''} placeholder="0%" onChange={e => setPct401k(parseFloat(e.target.value) || 0)} style={{ borderColor: 'var(--border)' }} />
-                      <button type="button" onClick={onSaveProfile} className="warning-btn" style={{ background: 'var(--warning-gradient)' }}>SET</button>
-                    </div>
-                  </div>
-                  
-                  <div className="item-list">
-                    {(savedSalary?.custom_deductions || []).length === 0 && <div className="empty-state">No Pre-Tax Obligations Logged</div>}
-                    {(savedSalary?.custom_deductions || []).map((d: any) => (
-                      <div key={d.id} className="workflow-item">
-                        <div><span>{d.name}</span><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{d.frequency}</div></div>
-                        <div className="item-right"><span className="negative" style={{ color: 'var(--warning)' }}>-${safeFormat(d.amount)}</span><button type="button" onClick={async () => { await deleteDeduction(d.id); loadData(); }} className="remove-btn">&times;</button></div>
-                      </div>
-                    ))}
-                  </div>
-
-                  <form onSubmit={onAddDeduction} className="add-item-form">
-                    <div className="form-group"><label style={{ fontSize: '0.65rem' }}>New Pre-Tax (Health, HSA)</label><input placeholder="Obligation Name" value={newDeduction.name} onChange={e => setNewDeduction({...newDeduction, name: e.target.value})} style={{ borderColor: 'var(--border)' }} /></div>
-                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px', marginTop: '15px' }}>
-                      <div className="currency-input-wrapper" style={{ borderColor: 'var(--border)' }}>
-                        <span className="currency-prefix" style={{ color: 'var(--warning)' }}>$</span>
-                        <input type="number" placeholder="0.00" value={newDeduction.amount} onChange={e => setNewDeduction({...newDeduction, amount: e.target.value})} />
-                      </div>
-                      <select value={newDeduction.frequency} onChange={e => setNewDeduction({...newDeduction, frequency: e.target.value})} style={{ fontSize: '0.75rem' }}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select>
-                    </div>
-                    <button type="submit" className="add-btn" style={{ width: '100%', marginTop: '15px', background: 'var(--subtle-overlay)', border: '1px solid var(--warning)', color: 'var(--warning)' }}>ADD DEDUCTION</button>
-                  </form>
-                </div>
-              )}
-            </section>
-          </div>
-
-          {/* STEP 3: OTHER INCOME */}
-          <div className={`workflow-step ${activeStep === 3 ? 'focused' : 'collapsed'}`}>
-            <div className="step-indicator" onClick={() => setActiveStep(3)} style={{ borderColor: 'var(--success)', color: 'var(--text)' }}>3</div>
-            <section className="card" onClick={() => activeStep !== 3 && setActiveStep(3)} style={{ borderTop: '4px solid var(--success)', borderLeft: '5px solid var(--success)', background: 'var(--subtle-overlay)', position: 'relative' }}>
-              {renderColorPicker('step3')}
-              <div className="step-header">
-                <h3 className="centered-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', whiteSpace: 'nowrap' }}>
-                  <span>OTHER INCOME:</span>
-                  <span style={{ color: 'var(--success)' }}>+${safeFormat(totalOtherIncome)}/MO</span>
-                </h3>
-              </div>
-              
-              {activeStep === 3 && (
-                <div className="step-content-expanded">
-                  <div className="item-list">
-                    {(incomeSources || []).length === 0 && <div className="empty-state">No Additional Sources Logged</div>}
-                    {(incomeSources || []).map(src => (
-                      <div key={src.id} className="workflow-item">
-                        <div><span>{src.name} {src.is_taxed && <small className="taxed-label">(Taxed)</small>}</span><div style={{ fontSize: '0.6rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>{src.frequency}</div></div>
-                        <div className="item-right"><span className="positive" style={{ color: 'var(--success)' }}>+${safeFormat(src.amount)}</span><button type="button" onClick={async () => { await deleteIncomeSource(src.id); loadData(); }} className="remove-btn">&times;</button></div>
-                      </div>
-                    ))}
-                  </div>
-                  <form onSubmit={onAddSource} className="add-item-form success">
-                    <input placeholder="Source Name" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} style={{ marginBottom: '15px', borderColor: 'var(--border)' }} />
-                    <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                      <div className="currency-input-wrapper" style={{ borderColor: 'var(--border)' }}>
-                        <span className="currency-prefix" style={{ color: 'var(--success)' }}>$</span>
-                        <input type="number" placeholder="0.00" value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} />
-                      </div>
-                      <select value={newSource.frequency} onChange={e => setNewSource({...newSource, frequency: e.target.value})} style={{ fontSize: '0.75rem' }}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select>
-                    </div>
-                    <button type="submit" className="add-btn-success" style={{ width: '100%', marginTop: '15px', background: 'var(--success-gradient)' }}>ADD SOURCE</button>
-                  </form>
-                </div>
-              )}
-            </section>
-          </div>
-        </div>
-
-        {/* SUMMARY */}
-        <div className="summary-column">
-          <section className={`card sticky-summary-v2 ${isPulsing ? 'pulse-glow' : ''}`} style={{ borderTop: '4px solid var(--primary)', borderLeft: '5px solid var(--primary)' }}>
-            <div className="summary-header-v2"><label>FINAL ASSESSMENT</label><h3>NET TAKE-HOME</h3></div>
-            <div className="summary-details-v2">
-              <div className="summary-row-v2"><span className="label">Monthly Gross</span><span className="value currency">${safeFormat(taxEstimate?.annual_salary / 12)}</span></div>
-              <div className="summary-row-v2"><span className="label negative">401k + Deductions</span><span className="value negative currency">-${safeFormat((taxEstimate?.deduction_401k + taxEstimate?.total_pre_tax_deductions) / 12)}</span></div>
-              <div className="summary-row-v2"><span className="label negative">FICA (SS + Medicare)</span><span className="value negative currency">-${safeFormat(taxEstimate?.fica_tax / 12)}</span></div>
-              <div className="tax-module-v2">
-                <div className="tax-header-v2"><span className="label negative">COMBINED TAXES</span><button type="button" onClick={() => { setUseManualTax(!useManualTax); onSaveProfile(new Event('submit') as any); }} className="override-btn-v2">{useManualTax ? 'MANUAL' : 'AUTO'}</button></div>
-                {useManualTax ? (
-                  <div className="manual-tax-input-v2">
-                    <div className="currency-input-wrapper" style={{ border: 'none', background: 'rgba(255,255,255,0.05)' }}>
-                      <span className="currency-prefix" style={{ color: 'var(--danger)', paddingLeft: '10px' }}>$</span>
-                      <input type="number" value={manualTaxAmount || ''} placeholder="0.00" onChange={e => setManualTaxAmount(parseFloat(e.target.value) || 0)} style={{ fontSize: '0.8rem', padding: '8px' }} />
-                    </div>
-                    <button type="button" onClick={onSaveProfile}>OK</button>
-                  </div>
-                ) : (
-                  <div className="tax-breakdown-v2"><div className="tax-main-v2 negative">-${safeFormat((taxEstimate?.estimated_tax + taxEstimate?.state_tax) / 12)}</div><div className="tax-sub-v2">Fed: -${safeFormat(taxEstimate?.estimated_tax / 12)} • State ({taxEstimate?.state}): -${safeFormat(taxEstimate?.state_tax / 12)}</div></div>
-                )}
-              </div>
-              <div className="summary-row-v2" style={{ marginTop: '10px' }}><span className="label positive">Other Income</span><span className="value positive currency">+${safeFormat(totalOtherIncome)}</span></div>
-              <div className="final-result-box-v2"><div className="result-label-v2">VERIFIED MONTHLY NET</div><div className="result-value-v2 currency positive">${safeFormat(totalVerifiedNetMonthly)}</div><div className="annual-projection-v2">≈ ${safeFormat(totalVerifiedNetMonthly * 12)} ANNUALLY</div></div>
-              <div className="specs-toggle-container-v2"><button onClick={() => setIsSpecsExpanded(!isSpecsExpanded)} className="specs-toggle-btn-v2">{isSpecsExpanded ? 'HIDE TECH SPECS' : 'SHOW TECH SPECS'}</button>
-                {isSpecsExpanded && (
-                  <div className="specs-expanded-content-v2">
-                    <div className="spec-line-v2"><span>2025 Standard Deduction</span><strong>${(taxEstimate?.filing_status === 'married_joint' || taxEstimate?.filing_status === 'widow') ? '30,000' : '15,000'}</strong></div>
-                    <div className="spec-line-v2"><span>Social Security (OASDI)</span><strong>6.2%</strong></div>
-                    <div className="spec-line-v2"><span>Medicare (HI)</span><strong>1.45%</strong></div>
-                    {taxEstimate?.annual_salary > 200000 && <div className="spec-line-v2"><span>Addl. Medicare Surcharge</span><strong>0.9%</strong></div>}
-                    <div className="spec-line-v2"><span>State Income Tax ({taxEstimate?.state})</span><strong>{['TX','FL','WA','NV','AK','SD','TN','WY'].includes(taxEstimate?.state) ? '0%' : '≈ 5%'}</strong></div>
-                  </div>
-                )}
-              </div>
-              <div className="tax-disclaimer-v2">*Estimates based on 2025 brackets.</div>
+            ) : (
+              <div style={groupStyle}><label style={labelStyle}>Annual Gross Salary</label><div className="currency-input-wrapper"><span className="currency-prefix currency" style={{ color: boxColors['income'] || 'var(--primary)', paddingLeft: '20px' }}>$</span><input className="currency" style={{ padding: '18px 20px', paddingLeft: '10px' }} type="number" value={annualGross || ''} onChange={e => setAnnualGross(parseFloat(e.target.value) || 0)} /></div></div>
+            )}
+            <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+              <div style={groupStyle}><label style={labelStyle}>Filing Status</label><select style={{ padding: '18px 20px' }} value={localFilingStatus} onChange={e => setLocalFilingStatus(e.target.value)}><option value="">-- Select --</option><option value="single">Single</option><option value="married_joint">Married Filing Jointly</option><option value="married_separate">Married Separate</option><option value="head_household">Head Household</option><option value="widow">Widow(er)</option></select></div>
+              <div style={groupStyle}><label style={labelStyle}>Residing State</label><select style={{ padding: '18px 20px' }} value={localState} onChange={e => setLocalState(e.target.value)}><option value="">-- Select --</option>{US_STATES.map(s => <option key={s.code} value={s.code}>{s.code}</option>)}</select></div>
             </div>
-          </section>
+            <div style={groupStyle}><label style={labelStyle}>401k Contribution (%)</label><input style={{ padding: '18px 20px' }} type="number" value={pct401k || ''} onChange={e => setPct401k(parseFloat(e.target.value) || 0)} placeholder="e.g. 6" /></div>
+            <button type="submit" className="primary-btn" style={{ height: '60px', fontSize: '1.1rem', background: boxColors['income'] || 'var(--primary-gradient)', marginTop: '10px' }}>{syncMessage || 'SYNC CURRENT PROFILE'}</button>
+          </form>
+        </section>
+      </SortableItem>
+    ),
+    ribbon: (
+      <SortableItem key="ribbon" id="ribbon" isEditMode={isEditMode}>
+        <section className="card highlight" style={{ background: 'rgba(59, 130, 246, 0.05)', border: `1px solid ${boxColors['income'] || '#3b82f6'}`, borderRadius: '20px', textAlign: 'center', padding: '12px 25px', '--local-accent': boxColors['income'] || '#3b82f6', display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'center', gap: '20px' } as any}>
+          <h2 style={{ fontSize: '0.9rem', fontWeight: 900, color: boxColors['income'] || 'var(--primary)', letterSpacing: '0.15em', textTransform: 'uppercase', margin: 0, borderRight: `1px solid ${boxColors['income'] || 'rgba(59, 130, 246, 0.2)'}`, paddingRight: '20px' }}>Profile</h2>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '25px', flexWrap: 'wrap', justifyContent: 'center' }}>
+            <div style={{ textAlign: 'left' }}><label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'block', fontWeight: 900 }}>SALARY</label><div className="currency" style={{ fontSize: '1.2rem', fontWeight: 900, color: boxColors['income'] || 'var(--primary)' }}>${safeFormat(rawGross)}</div></div>
+            <div style={{ textAlign: 'left' }}><label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'block', fontWeight: 900 }}>STATUS</label><div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{rawFiling.replace('_', ' ').toUpperCase() || 'NOT SET'}</div></div>
+            <div style={{ textAlign: 'left' }}><label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', display: 'block', fontWeight: 900 }}>STATE</label><div style={{ fontSize: '1.2rem', fontWeight: 900 }}>{rawState}</div></div>
+          </div>
+        </section>
+      </SortableItem>
+    ),
+    modules: (
+      <SortableItem key="modules" id="modules" isEditMode={isEditMode}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+          <div className="card card-condensed" style={{ borderTop: `4px solid ${boxColors['tax'] || '#f43f5e'}`, borderLeft: `4px solid ${boxColors['tax'] || '#f43f5e'}`, '--local-accent': boxColors['tax'] || '#f43f5e' } as any}>{renderColorPicker('tax')}<h3 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, marginBottom: '20px', color: boxColors['tax'] || 'var(--danger)', textTransform: 'uppercase' }}>Tax Liability</h3><div className="dissemination-list"><div className="ledger-row"><span>Federal Income Tax</span><strong className="currency">-${safeFormat(monthlyFedTax)}</strong></div><div className="ledger-row"><span>FICA (SS/Med)</span><strong className="currency">-${safeFormat(monthlyFica)}</strong></div><div className="ledger-row"><span>State Tax ({rawState})</span><strong className="currency">-${safeFormat(monthlyStateTax)}</strong></div><div className="ledger-total" style={{ color: boxColors['tax'] || 'var(--danger)', borderTopColor: boxColors['tax'] || 'var(--danger)' }}><span>Total Tax</span><strong className="currency">-${safeFormat(totalMonthlyTaxes)}</strong></div></div></div>
+          <div className="card card-condensed" style={{ borderTop: `4px solid ${boxColors['pre'] || '#f59e0b'}`, borderLeft: `4px solid ${boxColors['pre'] || '#f59e0b'}`, '--local-accent': boxColors['pre'] || '#f59e0b' } as any}>{renderColorPicker('pre')}<h3 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, marginBottom: '20px', color: boxColors['pre'] || 'var(--warning)', textTransform: 'uppercase' }}>Pre-Tax Deductions</h3><div className="dissemination-list"><div className="ledger-row"><span>401k</span><strong className="currency">-${safeFormat(monthly401k)}</strong></div><div className="ledger-row"><span>Other Pre-Tax</span><strong className="currency">-${safeFormat(preTaxDeductionsMonthly)}</strong></div><div className="ledger-total" style={{ color: boxColors['pre'] || 'var(--warning)', borderTopColor: boxColors['pre'] || 'var(--warning)' }}><span>Total Pre Tax</span><strong className="currency">-${safeFormat(totalMonthlyPreTax)}</strong></div></div></div>
+          <div className="card card-condensed" style={{ borderTop: `4px solid ${boxColors['post'] || '#8b5cf6'}`, borderLeft: `4px solid ${boxColors['post'] || '#8b5cf6'}`, '--local-accent': boxColors['post'] || '#8b5cf6' } as any}>{renderColorPicker('post')}<h3 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, marginBottom: '20px', color: boxColors['post'] || '#a78bfa', textTransform: 'uppercase' }}>Post-Tax</h3><div className="dissemination-list"><div className="ledger-row"><span>Net Pay Deducts</span><strong className="currency">-${safeFormat(postTaxDeductionsMonthly)}</strong></div><div className="ledger-total" style={{ color: '#a78bfa', borderTopColor: '#a78bfa' }}><span>Total Post-Tax</span><strong className="currency">-${safeFormat(postTaxDeductionsMonthly)}</strong></div></div></div>
+          <div className="card card-condensed" style={{ borderTop: `4px solid ${boxColors['other'] || '#10b981'}`, borderLeft: `4px solid ${boxColors['other'] || '#10b981'}`, '--local-accent': boxColors['other'] || '#10b981' } as any}>{renderColorPicker('other')}<h3 style={{ textAlign: 'center', fontSize: '1.1rem', fontWeight: 900, marginBottom: '20px', color: boxColors['other'] || 'var(--success)', textTransform: 'uppercase' }}>Other Revenue</h3><div className="dissemination-list"><div className="ledger-row"><span>Additional</span><strong className="currency">+${safeFormat(totalOtherIncomeMonthly)}</strong></div><div className="ledger-total" style={{ color: 'var(--success)', borderTopColor: 'var(--success)' }}><span>Total Added</span><strong className="currency">+${safeFormat(totalOtherIncomeMonthly)}</strong></div></div></div>
         </div>
-      </div>
-
-      <div className="mobile-summary-footer">
-        <div className="footer-label">NET TAKE-HOME</div>
-        <div className="footer-value currency positive">${safeFormat(totalVerifiedNetMonthly)}</div>
-      </div>
-
-      <div className="footer-actions" style={{ display: 'flex', gap: '20px', marginTop: '40px', paddingBottom: '60px' }}>
-        <div className="card glow-saphyr highlight-hover" onClick={handleExportBlueprint} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', background: 'rgba(59, 130, 246, 0.05)', padding: '30px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '2px dashed var(--primary)' }}>
-          <div style={{ fontWeight: 900, fontSize: '1.3rem', marginBottom: '8px', color: 'var(--primary)' }}>🔒 EXPORT BLUEPRINT</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Professional PDF Income Projection</div>
+      </SortableItem>
+    ),
+    log: (
+      <SortableItem key="log" id="log" isEditMode={isEditMode}>
+        <div style={{ marginTop: '20px' }}>
+          <h2 style={{ textAlign: 'center', fontSize: '1.8rem', fontWeight: 900, marginBottom: '30px', textTransform: 'uppercase' }}>Revenue & Obligation Log</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px' }}>
+            <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', '--local-accent': '#f59e0b', padding: '45px' } as any}>
+              <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--warning)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Manage Deductions</div>
+              <div className="item-list">
+                {(savedSalary?.custom_deductions || []).map((d: any) => (
+                  <div key={d.id} className="workflow-item" onClick={() => handleEditDeduction(d)} style={{ cursor: 'pointer', padding: '15px' }}>
+                    <div style={{ flex: 1 }}><div style={{ fontWeight: 900, fontSize: '1rem' }}>{d.name.toUpperCase()}</div><div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{d.frequency.toUpperCase()} • {d.is_pre_tax ? 'PRE-TAX' : 'POST-TAX'}</div></div>
+                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}><div className="currency" style={{ fontWeight: 900, color: 'var(--danger)', fontSize: '1.1rem' }}>-${safeFormat(d.amount)}</div><div style={{ display: 'flex', gap: '8px' }}><button onClick={() => handleEditDeduction(d)} className="edit-mini-btn" style={{ fontSize: '1.2rem' }}>✎</button><button onClick={async (e) => { e.stopPropagation(); await deleteDeduction(d.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem' }}>&times;</button></div></div>
+                  </div>
+                ))}
+              </div>
+              {!isDeductionFormOpen ? (
+                <button className="primary-btn" onClick={() => setIsDeductionFormOpen(true)} style={{ background: 'var(--warning-gradient)', height: '60px', marginTop: '10px' }}>LOG NEW DEDUCTION</button>
+              ) : (
+                <form id="deduction-form" onSubmit={onDeductionSubmit} style={{ marginTop: '20px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', textAlign: 'center', marginBottom: '30px', letterSpacing: '0.1em', background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>{newDeduction.id ? `EDITING: ${newDeduction.name.toUpperCase()}` : 'NEW DEDUCTION ENTRY'}</div>
+                  <div style={groupStyle}><label style={labelStyle}>Description</label><input style={{ padding: '18px 20px' }} required placeholder="DESCRIPTION" value={newDeduction.name} onChange={e => setNewDeduction({...newDeduction, name: e.target.value})} /></div>
+                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                    <div style={groupStyle}><label style={labelStyle}>Amount</label><div className="currency-input-wrapper"><span className="currency-prefix currency" style={{ paddingLeft: '20px' }}>$</span><input className="currency" style={{ padding: '18px 20px', paddingLeft: '10px' }} type="number" step="0.01" required value={newDeduction.amount} onChange={e => setNewDeduction({...newDeduction, amount: e.target.value})} /></div></div>
+                    <div style={groupStyle}><label style={labelStyle}>Frequency</label><select style={{ padding: '18px 20px' }} value={newDeduction.frequency} onChange={e => setNewDeduction({...newDeduction, frequency: e.target.value})}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select></div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center', marginBottom: '30px' }}><input type="checkbox" id="preTaxCheck" checked={newDeduction.is_pre_tax} onChange={e => setNewDeduction({...newDeduction, is_pre_tax: e.target.checked})} style={{ width: '18px', height: '18px' }} /><label htmlFor="preTaxCheck" style={{ fontSize: '0.85rem', fontWeight: 800 }}>IS THIS PRE-TAX?</label></div>
+                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--warning-gradient)', height: '60px' }}>{newDeduction.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsDeductionFormOpen(false); setNewDeduction({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
+                </form>
+              )}
+            </section>
+            <section className="card" style={{ display: 'flex', flexDirection: 'column', gap: '20px', '--local-accent': '#10b981', padding: '45px' } as any}>
+              <div style={{ fontSize: '1rem', fontWeight: 900, color: 'var(--success)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Manage Other Income</div>
+              <div className="item-list">
+                {(incomeSources || []).map(source => (
+                  <div key={source.id} className="workflow-item" onClick={() => handleEditSource(source)} style={{ cursor: 'pointer', padding: '15px' }}>
+                    <div style={{ flex: 1 }}><div style={{ fontWeight: 900, fontSize: '1rem' }}>{source.name.toUpperCase()}</div><div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{source.frequency.toUpperCase()} {source.is_taxed && '• TAXED'}</div></div>
+                    <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: '12px' }}><div className="currency" style={{ fontWeight: 900, color: 'var(--success)', fontSize: '1.1rem' }}>+${safeFormat(source.amount)}</div><div style={{ display: 'flex', gap: '8px' }}><button onClick={() => handleEditSource(source)} className="edit-mini-btn" style={{ fontSize: '1.2rem' }}>✎</button><button onClick={async (e) => { e.stopPropagation(); await deleteIncomeSource(source.id); loadData(); }} className="remove-mini-btn" style={{ fontSize: '1.6rem' }}>&times;</button></div></div>
+                  </div>
+                ))}
+              </div>
+              {!isSourceFormOpen ? (
+                <button className="primary-btn" onClick={() => setIsSourceFormOpen(true)} style={{ background: 'var(--success-gradient)', height: '60px', marginTop: '10px' }}>LOG NEW INCOME</button>
+              ) : (
+                <form id="source-form" onSubmit={onSourceSubmit} style={{ marginTop: '20px' }}>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 900, color: 'var(--primary)', textAlign: 'center', marginBottom: '30px', letterSpacing: '0.1em', background: 'rgba(59, 130, 246, 0.1)', padding: '12px', borderRadius: '10px', border: '1px solid var(--primary)' }}>{newSource.id ? `EDITING: ${newSource.name.toUpperCase()}` : 'NEW REVENUE ENTRY'}</div>
+                  <div style={groupStyle}><label style={labelStyle}>Description</label><input style={{ padding: '18px 20px' }} required placeholder="DESCRIPTION" value={newSource.name} onChange={e => setNewSource({...newSource, name: e.target.value})} /></div>
+                  <div className="grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '30px' }}>
+                    <div style={groupStyle}><label style={labelStyle}>Amount</label><div className="currency-input-wrapper"><span className="currency-prefix currency" style={{ paddingLeft: '20px' }}>$</span><input className="currency" style={{ padding: '18px 20px', paddingLeft: '10px' }} type="number" step="0.01" required value={newSource.amount} onChange={e => setNewSource({...newSource, amount: e.target.value})} /></div></div>
+                    <div style={groupStyle}><label style={labelStyle}>Frequency</label><select style={{ padding: '18px 20px' }} value={newSource.frequency} onChange={e => setNewSource({...newSource, frequency: e.target.value})}><option value="monthly">Monthly</option><option value="bi-weekly">Bi-Weekly</option><option value="weekly">Weekly</option></select></div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'center', marginBottom: '30px' }}><input type="checkbox" id="taxedCheck" checked={newSource.is_taxed} onChange={e => setNewSource({...newSource, is_taxed: e.target.checked})} style={{ width: '18px', height: '18px' }} /><label htmlFor="taxedCheck" style={{ fontSize: '0.85rem', fontWeight: 800 }}>IS THIS TAXED?</label></div>
+                  <div style={{ display: 'flex', gap: '15px' }}><button type="submit" className="primary-btn" style={{ flex: 2, background: 'var(--success-gradient)', height: '60px' }}>{newSource.id ? 'UPDATE' : 'LOG'}</button><button type="button" onClick={() => { setIsSourceFormOpen(false); setNewSource({ id: null, name: '', amount: '', is_taxed: false, frequency: 'monthly', account_id: '' }); }} style={{ flex: 1, background: 'rgba(255,255,255,0.05)', color: 'var(--text)', border: '1px solid var(--border)', height: '60px' }}>CANCEL</button></div>
+                </form>
+              )}
+            </section>
+          </div>
         </div>
+      </SortableItem>
+    )
+  };
 
-        <div className="card glow-danger highlight-hover" onClick={handleResetIncomeOnly} style={{ flex: 1, cursor: 'pointer', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', padding: '30px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', border: '2px dashed var(--danger)' }}>
-          <div style={{ fontWeight: 900, fontSize: '1.3rem', marginBottom: '8px', color: 'var(--danger)' }}>⚠️ RESET ARCHITECT</div>
-          <div style={{ fontSize: '0.75rem', color: 'var(--text)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.1em' }}>Purge All Income and Tax Data</div>
-        </div>
-      </div>
+  return (
+    <div className="income-page" style={{ paddingBottom: '60px' }}>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={layoutOrder} strategy={verticalListSortingStrategy}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            {layoutOrder.map(id => (sections as any)[id])}
+          </div>
+        </SortableContext>
+      </DndContext>
 
       <style>{`
-        .income-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; box-sizing: border-box; }
-        .export-blueprint-btn { width: auto; background: var(--primary-gradient); color: white; font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
-        .reset-architect-btn { width: auto; background: none; border: 1px solid var(--danger); color: var(--danger); font-size: 0.65rem; font-weight: 800; padding: 8px 15px; borderRadius: 8px; cursor: pointer; boxShadow: none; marginTop: 0; }
-        
-        .tech-specs-bar { display: flex; gap: 10px; margin-bottom: 30px; background: var(--card); border: 2px solid var(--border); border-radius: 16px; padding: 15px 15px; overflow-x: auto; scrollbar-width: none; border-top: 4px solid var(--primary); border-left: 5px solid var(--primary); }
-        .spec-gauge { flex: 1; min-width: 80px; display: flex; flex-direction: column; gap: 4px; border-right: 1px solid var(--item-divider); text-align: center; }
-        @media (max-width: 480px) { .tech-specs-bar { gap: 5px; padding: 10px 10px; } .spec-gauge { min-width: 70px; } .gauge-val { font-size: 0.95rem; } }
-        .spec-gauge:last-child { border-right: none; }
-        .spec-gauge label { font-size: 0.6rem; color: var(--text-muted); font-weight: 900; text-transform: uppercase; letter-spacing: 0.1em; }
-        .gauge-val { font-family: 'JetBrains Mono', monospace; font-size: 1.1rem; font-weight: 900; color: var(--text); }
-
-        .sync-banner { background: var(--success-gradient); color: white; padding: 15px; borderRadius: 12px; textAlign: center; fontWeight: 900; fontSize: 0.8rem; letterSpacing: 0.1em; marginBottom: 25px; animation: pageEnter 0.3s ease; }
-        .income-grid-layout { display: grid; grid-template-columns: 1fr; gap: 40px; width: 100%; box-sizing: border-box; padding-bottom: 100px; }
-        @media (min-width: 1024px) { .income-grid-layout { grid-template-columns: minmax(0, 1.8fr) minmax(380px, 1.2fr); align-items: start; } }
-
-        .workflow-column { display: flex; flex-direction: column; gap: 25px; position: relative; width: 100%; box-sizing: border-box; }
-        .workflow-column::before { content: ''; position: absolute; left: 20px; top: 0; bottom: 0; width: 2px; background: var(--border); z-index: 0; opacity: 0.3; }
-        
-        .workflow-step { position: relative; padding-left: 60px; z-index: 1; width: 100%; box-sizing: border-box; transition: all 0.4s ease; }
-        @media (max-width: 480px) { .workflow-step { padding-left: 45px; } .centered-title { font-size: 0.95rem; } }
-        .workflow-step.collapsed { opacity: 0.7; }
-        .workflow-step.collapsed section { cursor: pointer; padding: 15px 25px; }
-        .step-indicator { position: absolute; left: 0; top: 15px; width: 40px; height: 40px; border-radius: 50%; background: var(--bg); border: 2px solid var(--primary); color: var(--text); display: flex; align-items: center; justify-content: center; fontWeight: 900; font-size: 1.1rem; box-shadow: 0 0 15px var(--accent-glow); flex-shrink: 0; cursor: pointer; transition: all 0.3s ease; }
-        
-        .centered-title { text-align: center; margin: 0 0 25px 0; font-size: 1.1rem; font-weight: 900; letter-spacing: 0.05em; color: var(--text); }
-        .mode-switcher { display: flex; gap: 15px; }
-        .mode-switcher button { flex: 1; font-size: 0.75rem; background: rgba(255,255,255,0.05); color: var(--text-muted); border: 1px solid var(--border); padding: 12px; borderRadius: 10px; }
-        .mode-switcher button.active { color: white; border-color: transparent; font-weight: 900; }
-
-        /* RESTORED FINAL ASSESSMENT */
-        .sticky-summary-v2 { position: sticky; top: 100px; background: var(--card); border: 2px solid var(--border); padding: 35px; box-shadow: 0 20px 50px -12px rgba(0,0,0,0.5); width: 100%; box-sizing: border-box; text-align: center; }
-        .summary-header-v2 { margin-bottom: 30px; }
-        .summary-header-v2 label { font-size: 0.7rem; font-weight: 800; color: var(--text-muted); letter-spacing: 0.15em; }
-        .summary-header-v2 h3 { font-size: 1.3rem; font-weight: 900; margin-top: 8px; color: var(--text); }
-        .summary-row-v2 { display: flex; justify-content: space-between; font-size: 0.95rem; font-weight: 700; margin-bottom: 12px; }
-        .summary-row-v2 .label { color: var(--text-muted); }
-        .tax-module-v2 { background: rgba(244, 63, 94, 0.03); padding: 20px; border-radius: 16px; border: 1px solid rgba(244, 63, 94, 0.15); text-align: center; margin: 15px 0; }
-        .tax-header-v2 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .tax-header-v2 .label { font-size: 0.75rem; font-weight: 900; }
-        .override-btn-v2 { width: auto; padding: 4px 10px; font-size: 0.6rem; background: rgba(255,255,255,0.05); }
-        .tax-main-v2 { font-size: 1.6rem; font-weight: 900; font-family: 'JetBrains Mono', monospace; }
-        .tax-sub-v2 { font-size: 0.65rem; color: var(--text-muted); margin-top: 8px; }
-        .final-result-box-v2 { margin-top: 25px; padding: 35px 20px; background: var(--bg); border-radius: 20px; border: 3px solid var(--primary); display: flex; flex-direction: column; align-items: center; gap: 10px; box-shadow: 0 0 30px var(--accent-glow); }
-        .result-label-v2 { font-size: 0.75rem; font-weight: 900; color: var(--primary); letter-spacing: 0.2em; }
-        .result-value-v2 { font-size: 3rem; font-weight: 900; line-height: 1; }
-        .annual-projection-v2 { font-size: 0.85rem; font-weight: 800; color: var(--text-muted); opacity: 0.8; }
-        .tax-disclaimer-v2 { font-size: 0.65rem; color: var(--text-muted); text-align: center; margin-top: 25px; font-style: italic; }
-        .specs-toggle-container-v2 { margin-top: 20px; border-top: 1px solid var(--border); padding-top: 20px; }
-        .specs-toggle-btn-v2 { background: none; border: none; color: var(--primary); font-size: 0.7rem; font-weight: 900; cursor: pointer; padding: 0; box-shadow: none; width: auto; letter-spacing: 0.1em; }
-        .specs-expanded-content-v2 { margin-top: 15px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
-        .spec-line-v2 { display: flex; justify-content: space-between; font-size: 0.75rem; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
-
-        .sticky-summary-v2.pulse-glow { animation: sapphirePulse 1s ease; }
-        @keyframes sapphirePulse {
-          0% { box-shadow: 0 20px 50px -12px rgba(0,0,0,0.5); border-color: var(--border); }
-          50% { box-shadow: 0 0 30px var(--primary); border-color: var(--primary); }
-          100% { box-shadow: 0 20px 50px -12px rgba(0,0,0,0.5); border-color: var(--border); }
-        }
-
-        .mobile-summary-footer { display: none; position: fixed; bottom: 0; left: 0; right: 0; background: var(--card); border-top: 3px solid var(--primary); padding: 15px 25px; z-index: 1000; justify-content: space-between; align-items: center; box-shadow: 0 -10px 30px rgba(0,0,0,0.5); }
-        @media (max-width: 1023px) { .summary-column { display: none; } .mobile-summary-footer { display: flex; } .income-page { padding-bottom: 100px; } }
-        
-        @media (max-width: 768px) {
-          .footer-actions { flex-direction: column !important; gap: 15px !important; }
-        }
-
-        .primary-btn { width: 100%; fontWeight: 900; margin-top: 10px; }
-        .warning-btn { width: auto; background: var(--warning-gradient); color: white; font-weight: 900; margin-top: 0; }
-        .add-btn { width: auto; background: var(--subtle-overlay); }
-        .add-btn-success { width: auto; background: var(--success-gradient); color: white; font-weight: 900; }
-        .remove-btn { background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer; padding: 0; width: auto; margin-top: 0; box-shadow: none; }
+        .income-page { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+        .mode-switcher { display: flex; gap: 10px; background: rgba(255,255,255,0.02); padding: 6px; border-radius: 12px; border: 1px solid var(--border); }
+        .mode-switcher button { flex: 1; padding: 12px; border-radius: 10px; background: none; color: var(--text-muted); border: none; font-weight: 800; font-size: 0.85rem; transition: all 0.3s ease; cursor: pointer; }
+        .mode-switcher button.active { background: var(--primary-gradient); color: white; box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3); }
+        .ledger-row { display: flex; justify-content: space-between; align-items: center; color: var(--text-muted); padding: 8px 0; font-size: 0.95rem; }
+        .ledger-row strong { color: var(--text); font-weight: 900; }
+        .ledger-total { display: flex; justify-content: space-between; align-items: center; font-weight: 900; border-top: 2px solid var(--border); margin-top: 12px; paddingTop: 12px; font-size: 1.05rem; }
+        .item-list { display: flex; flex-direction: column; gap: 12px; max-height: 500px; overflow-y: auto; padding-right: 5px; }
+        .workflow-item { display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.02); border: 1px solid var(--border); border-radius: 14px; transition: all 0.2s ease; }
+        .workflow-item:hover { border-color: var(--primary); background: rgba(59, 130, 246, 0.05); }
+        .remove-mini-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; opacity: 0.6; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
+        .remove-mini-btn:hover { color: var(--danger); opacity: 1; transform: scale(1.1); }
+        .edit-mini-btn { background: none; border: none; color: var(--text-muted); cursor: pointer; opacity: 0.6; transition: 0.2s; padding: 5px; margin-top: 0; display: flex; align-items: center; justify-content: center; }
+        .edit-mini-btn:hover { color: var(--primary); opacity: 1; transform: scale(1.1); }
       `}</style>
     </div>
   );

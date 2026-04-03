@@ -5,198 +5,136 @@ import { useAuth } from '../../context/AuthContext';
 
 interface NavbarProps {
   theme: string;
-  toggleTheme: () => void;
+  setTheme: (theme: string) => void;
 }
 
-const Navbar: React.FC<NavbarProps> = ({ theme, toggleTheme }) => {
-  const { user, logout, isEditMode, toggleEditMode } = useAuth();
+const Navbar: React.FC<NavbarProps> = ({ theme, setTheme }) => {
+  const { user, logout, isEditMode, toggleEditMode, lockVault, hasVaultPin } = useAuth();
   const location = useLocation();
   const [isOpen, setIsOpen] = useState(false);
+  const [isThemeOpen, setIsThemeOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const themeRef = useRef<HTMLDivElement>(null);
 
   const toggleMenu = () => setIsOpen(!isOpen);
   const closeMenu = () => setIsOpen(false);
 
-  // Close menu on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    } else {
-      document.removeEventListener('mousedown', handleClickOutside);
+  const getPageTitle = (path: string) => {
+    switch (path) {
+      case '/': return 'DASHBOARD';
+      case '/income': return 'INCOME';
+      case '/accounts': return 'ACCOUNTS';
+      case '/bills': return 'BILLS';
+      case '/transactions': return 'TRANSACTIONS';
+      case '/trends': return 'TRENDS';
+      case '/settings': return 'SETTINGS';
+      default: return 'SAPHYR';
     }
+  };
 
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
-  // Define all available tabs
-  const allTabs = [
-    { path: '/', label: 'Dashboard', type: 'primary' },
-    { path: '/income', label: 'Income', type: 'primary' },
-    { path: '/accounts', label: 'Accounts', type: 'primary' },
-    { path: '/bills', label: 'Bills', type: 'secondary' },
-    { path: '/transactions', label: 'Transactions', type: 'primary' },
-    { path: '/trends', label: 'Trends', type: 'primary' },
-    { path: '/settings', label: 'Settings', type: 'secondary' },
+  const navOptions = [
+    { path: '/', label: 'Dashboard' },
+    { path: '/income', label: 'Income' },
+    { path: '/accounts', label: 'Accounts' },
+    { path: '/bills', label: 'Bills' },
+    { path: '/transactions', label: 'Transactions' },
+    { path: '/trends', label: 'Trends' },
+    { path: '/settings', label: 'Settings' }
   ];
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
-
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth <= 768);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) setIsOpen(false);
+      if (themeRef.current && !themeRef.current.contains(event.target as Node)) setIsThemeOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
-
-  const visibleTabs = user?.visible_tabs;
-  const filteredTabs = Array.isArray(visibleTabs) && visibleTabs.length > 0
-    ? allTabs.filter(tab => visibleTabs.includes(tab.path))
-    : allTabs;
-
-  // Restore full menu for everyone
-  const menuTabs = filteredTabs;
-  
-  // Keep desktop bar for convenience on large screens
-  const desktopTabs = filteredTabs.filter(tab => tab.type === 'primary');
 
   if (!user) return null;
 
   return (
-    <>
-      <nav className="navbar" ref={menuRef}>
-        <div className="navbar-container">
-          <Link to="/" className="navbar-logo" onClick={closeMenu}>
-            <div className="logo-container">
-              <div className="logo-icon"></div>
-            </div>
-            <div className="logo-text">
-              <span className="brand-name">Saphyr</span>
-              <span className="brand-divider"></span>
-              <span className="brand-tagline">Financial Tracker</span>
-            </div>
-          </Link>
-
-          {!isMobile && (
-            <div className="desktop-nav">
-              {desktopTabs.map((tab: any) => (
-                <Link 
-                  key={tab.path} 
-                  to={tab.path} 
-                  className={`desktop-link ${location.pathname === tab.path ? 'active' : ''}`}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-            </div>
-          )}
+    <nav className="navbar">
+      <div className="navbar-container">
+        {/* ROW 1: BRANDING & CONTROL HUB */}
+        <div className="nav-row primary-row">
+          <div className="nav-group-left">
+            <Link to="/" className="navbar-logo" onClick={closeMenu}>
+              <div className="logo-container bigger"><div className="logo-icon"></div></div>
+              <span className="brand-name bigger">SAPHYR</span>
+            </Link>
+          </div>
           
-          <div className="navbar-right">
-            {isEditMode && (
+          <div className="nav-group-right">
+            {/* VAULT LOCK */}
+            {hasVaultPin && (
               <button 
-                className={`edit-mode-toggle active`}
-                onClick={toggleEditMode}
-                style={{ 
-                  width: '65px', 
-                  height: '32px',
-                  background: 'var(--primary)',
-                  color: 'white',
-                  padding: 0,
-                  fontSize: '0.7rem',
-                  fontWeight: 800,
-                  marginRight: '10px',
-                  boxShadow: '0 0 15px var(--primary)',
-                  marginTop: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  borderRadius: '8px',
-                  border: isEditMode ? '1px solid var(--primary)' : '1px solid var(--border)',
-                  letterSpacing: '0.05em',
-                  boxSizing: 'border-box'
-                }}
+                className="lock-vault-btn" 
+                onClick={lockVault}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', padding: '5px', marginRight: '10px', boxShadow: 'none' }}
+                title="Lock Saphyr Vault"
               >
-                DONE
+                🔒
               </button>
             )}
+
+            {/* MASTER ARCHITECT TOGGLE */}
             <button 
-              className="theme-toggle" 
-              onClick={toggleTheme}
-              style={{ 
-                width: '65px', 
-                height: '32px',
-                fontSize: '0.7rem', 
-                fontWeight: 800, 
-                padding: 0, 
-                borderRadius: '8px',
-                letterSpacing: '0.05em',
-                background: 'rgba(255,255,255,0.05)',
-                border: '1px solid var(--border)',
-                color: 'var(--text)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginTop: 0,
-                boxSizing: 'border-box'
-              }}
+              className={`architect-btn ${isEditMode ? 'active' : ''}`} 
+              onClick={toggleEditMode}
+              title="Architect Mode (Edit Layout/Colors)"
             >
-              {theme === 'light' ? 'DARK' : theme === 'dark' ? 'OLED' : 'LIGHT'}
+              {isEditMode ? 'DONE' : 'EDIT'}
             </button>
+            
+            <div className="theme-dropdown-container" ref={themeRef}>
+              <button className="theme-trigger-v2" onClick={() => setIsThemeOpen(!isThemeOpen)}>
+                {theme.toUpperCase()}
+              </button>
+              {isThemeOpen && (
+                <div className="theme-menu card">
+                  {['LIGHT', 'DARK', 'OLED'].map(mode => (
+                    <button key={mode} onClick={() => { setTheme(mode.toLowerCase()); setIsThemeOpen(false); }} className={`theme-opt ${theme === mode.toLowerCase() ? 'active' : ''}`}>
+                      {mode} {theme === mode.toLowerCase() && '✓'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
 
-            <button className={`hamburger ${isOpen ? 'open' : ''}`} onClick={toggleMenu} aria-label="Menu">
-              <span className="hamburger-box">
-                <span className="hamburger-inner"></span>
-              </span>
-            </button>
-          </div>
-
-          <div className={`navbar-menu ${isOpen ? 'open' : ''}`}>
-            <div className="menu-links">
-              <div className="user-profile" style={{ padding: '10px 20px', borderBottom: '1px solid var(--border)', marginBottom: '10px' }}>
-                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.1em' }}>Signed in as</div>
-                <div style={{ fontWeight: 800, color: 'var(--text)', fontSize: '0.9rem', marginTop: '4px' }}>{user.full_name || user.email}</div>
-              </div>
+            <div className="menu-dropdown-wrapper" ref={menuRef}>
+              <button className={`hamburger ${isOpen ? 'open' : ''}`} onClick={toggleMenu} aria-label="Menu">
+                <span className="hamburger-box"><span className="hamburger-inner"></span></span>
+              </button>
               
-              {menuTabs.map((tab: any) => (
-                <Link 
-                  key={tab.path} 
-                  to={tab.path} 
-                  className={`nav-link ${location.pathname === tab.path ? 'active' : ''}`} 
-                  onClick={closeMenu}
-                >
-                  {tab.label}
-                </Link>
-              ))}
-              
-              <div style={{ marginTop: 'auto', paddingTop: '20px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                <button 
-                  onClick={() => {
-                    closeMenu();
-                    logout();
-                  }} 
-                  style={{ 
-                    background: 'rgba(244, 63, 94, 0.1)', 
-                    color: 'var(--danger)', 
-                    border: '1px solid rgba(244, 63, 94, 0.2)',
-                    boxShadow: 'none',
-                    fontSize: '0.85rem',
-                    fontWeight: 700
-                  }}
-                >
-                  Sign Out
-                </button>
-              </div>
+              {isOpen && (
+                <div className="navbar-dropdown-menu card">
+                  <div className="dropdown-links">
+                    <div className="dropdown-user-info">
+                      <label>SIGNED IN AS</label>
+                      <div className="dropdown-user-name">{user.full_name || user.email}</div>
+                    </div>
+                    
+                    {navOptions.map(opt => (
+                      <Link key={opt.path} to={opt.path} className={`dropdown-link ${location.pathname === opt.path ? 'active' : ''}`} onClick={closeMenu}>
+                        {opt.label}
+                      </Link>
+                    ))}
+                    
+                    <button onClick={() => { closeMenu(); logout(); }} className="dropdown-sign-out">SIGN OUT</button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      </nav>
-    </>
+
+        {/* ROW 2: CENTERED CONTEXT */}
+        <div className="nav-row secondary-row centered">
+          <div className="page-title-row">{getPageTitle(location.pathname)}</div>
+        </div>
+      </div>
+    </nav>
   );
 };
 

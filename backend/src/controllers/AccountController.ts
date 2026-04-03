@@ -1,6 +1,7 @@
 import { Response } from 'express';
 import { AccountService } from '../services/AccountService.js';
 import { AuthRequest } from '../middleware/authMiddleware.js';
+import { RecurringTransactionService } from '../services/RecurringTransactionService.js';
 
 export class AccountController {
   static async createAccount(req: AuthRequest, res: Response) {
@@ -30,6 +31,14 @@ export class AccountController {
   static async getAccounts(req: AuthRequest, res: Response) {
     try {
       const userId = req.userId;
+      
+      // AUTO-PROCESS RECURRING INCOME DEPOSITS
+      try {
+        await RecurringTransactionService.processMonthlyIncome(userId as string);
+      } catch (err) {
+        console.error("Auto-income process failed:", err);
+      }
+
       const accounts = await AccountService.getAccountsByUserId(userId as string);
       res.json(accounts);
     } catch (error: any) {

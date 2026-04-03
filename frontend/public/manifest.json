@@ -4,7 +4,7 @@
   "description": "Private, Premium Financial Tracking",
   "icons": [
     {
-      "src": "favicon.svg",
+      "src": "logo.svg",
       "type": "image/svg+xml",
       "sizes": "any",
       "purpose": "any"

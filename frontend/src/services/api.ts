@@ -14,6 +14,14 @@ const getHeaders = () => {
   return headers;
 };
 
+const handleResponse = async (response: Response) => {
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data.error || data.message || `Request failed with status ${response.status}`);
+  }
+  return data;
+};
+
 export const signup = async (data: any) => {
   const response = await fetch(`${API_URL}/auth/signup`, {
     method: 'POST',
@@ -21,7 +29,7 @@ export const signup = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const login = async (data: any) => {
@@ -31,7 +39,7 @@ export const login = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const logout = async () => {
@@ -40,7 +48,7 @@ export const logout = async () => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const verify2FA = async (data: any) => {
@@ -50,7 +58,7 @@ export const verify2FA = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const forgotPassword = async (email: string) => {
@@ -60,7 +68,7 @@ export const forgotPassword = async (email: string) => {
     body: JSON.stringify({ email }),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const resetPassword = async (data: any) => {
@@ -70,7 +78,7 @@ export const resetPassword = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updatePassword = async (data: any) => {
@@ -80,7 +88,7 @@ export const updatePassword = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteAccountApi = async () => {
@@ -89,7 +97,7 @@ export const deleteAccountApi = async () => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const resetAccountApi = async () => {
@@ -98,12 +106,12 @@ export const resetAccountApi = async () => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const fetchAccounts = async () => {
   const response = await fetch(`${API_URL}/accounts`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createAccount = async (data: any) => {
@@ -113,7 +121,7 @@ export const createAccount = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updateAccount = async (id: string, data: any) => {
@@ -123,7 +131,7 @@ export const updateAccount = async (id: string, data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteAccount = async (id: string) => {
@@ -132,12 +140,12 @@ export const deleteAccount = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const fetchTransactions = async () => {
   const response = await fetch(`${API_URL}/transactions`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createTransaction = async (data: any) => {
@@ -147,7 +155,7 @@ export const createTransaction = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteTransaction = async (id: string) => {
@@ -156,17 +164,17 @@ export const deleteTransaction = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const fetchTaxEstimate = async () => {
   const response = await fetch(`${API_URL}/tax/estimate?t=${Date.now()}`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const fetchTaxProfile = async () => {
   const response = await fetch(`${API_URL}/tax/profile`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updateTaxProfile = async (data: any) => {
@@ -176,7 +184,7 @@ export const updateTaxProfile = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const seedTaxBrackets = async () => {
@@ -185,12 +193,12 @@ export const seedTaxBrackets = async () => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const fetchSalaryProfile = async () => {
   const response = await fetch(`${API_URL}/salary`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updateSalaryProfile = async (data: any) => {
@@ -200,7 +208,7 @@ export const updateSalaryProfile = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const addDeduction = async (data: any) => {
@@ -210,7 +218,7 @@ export const addDeduction = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteDeduction = async (id: string) => {
@@ -219,13 +227,23 @@ export const deleteDeduction = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
+};
+
+export const updateDeduction = async (id: string, data: any) => {
+  const response = await fetch(`${API_URL}/salary/deductions/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+    credentials: 'include'
+  });
+  return handleResponse(response);
 };
 
 // Budget API
 export const fetchBudgets = async () => {
   const response = await fetch(`${API_URL}/budgets`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createBudget = async (data: any) => {
@@ -235,7 +253,7 @@ export const createBudget = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteBudget = async (id: string) => {
@@ -244,13 +262,13 @@ export const deleteBudget = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 // Income Sources API
 export const fetchIncomeSources = async () => {
   const response = await fetch(`${API_URL}/income-sources`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createIncomeSource = async (data: any) => {
@@ -260,7 +278,7 @@ export const createIncomeSource = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteIncomeSource = async (id: string) => {
@@ -269,13 +287,23 @@ export const deleteIncomeSource = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
+};
+
+export const updateIncomeSource = async (id: string, data: any) => {
+  const response = await fetch(`${API_URL}/income-sources/${id}`, {
+    method: 'PUT',
+    headers: getHeaders(),
+    body: JSON.stringify(data),
+    credentials: 'include'
+  });
+  return handleResponse(response);
 };
 
 // Snapshots API
 export const fetchSnapshots = async () => {
   const response = await fetch(`${API_URL}/snapshots`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createSnapshot = async (data: any) => {
@@ -285,13 +313,13 @@ export const createSnapshot = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 // Savings Goals API
 export const fetchGoals = async () => {
   const response = await fetch(`${API_URL}/goals`, { headers: getHeaders(), credentials: 'include' });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const createGoal = async (data: any) => {
@@ -301,7 +329,7 @@ export const createGoal = async (data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const updateGoal = async (id: string, data: any) => {
@@ -311,7 +339,7 @@ export const updateGoal = async (id: string, data: any) => {
     body: JSON.stringify(data),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };
 
 export const deleteGoal = async (id: string) => {
@@ -320,5 +348,5 @@ export const deleteGoal = async (id: string) => {
     headers: getHeaders(),
     credentials: 'include'
   });
-  return response.json();
+  return handleResponse(response);
 };

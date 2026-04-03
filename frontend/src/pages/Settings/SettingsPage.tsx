@@ -12,9 +12,10 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
 const SettingsPage: React.FC = () => {
-  const { user, logout, isPrivacyMode, togglePrivacyMode, isEditMode, toggleEditMode, updateUserPreferences } = useAuth();
+  const { user, logout, isPrivacyMode, togglePrivacyMode, isEditMode, toggleEditMode, updateUserPreferences, setVaultPin, hasVaultPin } = useAuth();
   const { confirm } = useModal();
   const [passwords, setPasswords] = useState({ current: '', new: '', confirm: '' });
+  const [vaultPinInput, setVaultPinInput] = useState('');
   const [identity, setIdentity] = useState({ email: user?.email || '', full_name: user?.full_name || '' });
   const [message, setMessage] = useState({ text: '', type: '' });
   const [loading, setLoading] = useState(false);
@@ -339,17 +340,50 @@ const SettingsPage: React.FC = () => {
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
+              {/* SAPHYR VAULT PIN */}
+              <div className="card glow-primary" style={{ padding: '25px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>SAPHYR VAULT PIN</div>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '4px' }}>Physical security layer for your data.</div>
+                </div>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <input 
+                    type="password" 
+                    placeholder="4-DIGIT PIN" 
+                    maxLength={4} 
+                    value={vaultPinInput}
+                    onChange={e => setVaultPinInput(e.target.value.replace(/\D/g,''))}
+                    style={{ width: '120px', textAlign: 'center', letterSpacing: '0.5em' }}
+                  />
+                  <button 
+                    onClick={() => {
+                      if (vaultPinInput.length === 4) {
+                        setVaultPin(vaultPinInput);
+                        setMessage({ text: 'VAULT PIN SECURED', type: 'success' });
+                        setVaultPinInput('');
+                      }
+                    }} 
+                    style={{ width: 'auto', background: 'var(--primary)', fontSize: '0.7rem' }}
+                  >
+                    {hasVaultPin ? 'UPDATE' : 'SET PIN'}
+                  </button>
+                </div>
+              </div>
+
               {/* COLLAPSIBLE IDENTITY */}
               <div className="card glow-primary" style={{ padding: 0, overflow: 'hidden' }}>
                 <button onClick={() => setIsIdentityExpanded(!isIdentityExpanded)} style={{ width: '100%', background: 'none', padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: 'none', border: 'none', color: 'var(--text)', marginTop: 0 }}>
                   <div style={{ textAlign: 'left' }}>
                     <div style={{ fontWeight: 800, fontSize: '0.9rem' }}>ASSOCIATED IDENTITY</div>
-                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px' }}>{user?.full_name || 'No Username'} • {user?.email}</div>
                   </div>
                   <span style={{ fontSize: '1.2rem', fontWeight: 900 }}>{isIdentityExpanded ? '−' : '+'}</span>
                 </button>
                 {isIdentityExpanded && (
                   <div style={{ padding: '0 20px 25px 20px', borderTop: '1px solid var(--border)', paddingTop: '20px' }}>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '20px', padding: '15px', background: 'rgba(255,255,255,0.02)', borderRadius: '10px', border: '1px solid var(--border)' }}>
+                      <label style={{ fontSize: '0.55rem', fontWeight: 900, display: 'block', marginBottom: '4px', opacity: 0.6 }}>CURRENT IDENTITY</label>
+                      {user?.full_name || 'No Username'} • {user?.email}
+                    </div>
                     <form onSubmit={handleIdentityUpdate} style={{ maxWidth: '400px' }}>
                       <div className="form-group"><label>Email Address</label><input type="email" required value={identity.email} onChange={e => setIdentity({...identity, email: e.target.value})} /></div>
                       <div className="form-group"><label>Username</label><input type="text" required value={identity.full_name} onChange={e => setIdentity({...identity, full_name: e.target.value})} /></div>

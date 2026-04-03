@@ -12,6 +12,11 @@ interface AuthContextType {
   isEditMode: boolean;
   toggleEditMode: () => void;
   updateUserPreferences: (prefs: any) => Promise<void>;
+  isLocked: boolean;
+  lockVault: () => void;
+  unlockVault: (pin: string) => boolean;
+  setVaultPin: (pin: string) => void;
+  hasVaultPin: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +29,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.getItem('saphyr_privacy_mode') === 'true'
   );
   const [isEditMode, setIsEditMode] = useState(false);
+  
+  // VAULT LOCK STATE
+  const [vaultPin, setInternalVaultPin] = useState(localStorage.getItem('saphyr_vault_pin') || '');
+  const [isLocked, setIsLocked] = useState(false);
 
   // Validate session on mount
   useEffect(() => {
@@ -82,6 +91,42 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  // VAULT IDLE TIMER (5 Minutes)
+  useEffect(() => {
+    if (!user || !vaultPin || isLocked) return;
+
+    let vaultTimer: any;
+    const resetVaultTimer = () => {
+      if (vaultTimer) clearTimeout(vaultTimer);
+      vaultTimer = setTimeout(() => {
+        console.log("🔒 Vault Auto-Locked due to inactivity.");
+        setIsLocked(true);
+      }, 5 * 60 * 1000); 
+    };
+
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    events.forEach(event => document.addEventListener(event, resetVaultTimer));
+    resetVaultTimer();
+
+    return () => {
+      if (vaultTimer) clearTimeout(vaultTimer);
+      events.forEach(event => document.removeEventListener(event, resetVaultTimer));
+    };
+  }, [user, vaultPin, isLocked]);
+
+  const lockVault = () => { if (vaultPin) setIsLocked(true); };
+  const unlockVault = (pin: string) => {
+    if (pin === vaultPin) {
+      setIsLocked(false);
+      return true;
+    }
+    return false;
+  };
+  const setVaultPin = (pin: string) => {
+    setInternalVaultPin(pin);
+    localStorage.setItem('saphyr_vault_pin', pin);
+  };
+
   // Auto-Logout Logic
   useEffect(() => {
     if (!user || !user.auto_logout_minutes || user.auto_logout_minutes === 0) return;
@@ -125,7 +170,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       user, login, logout, loading, 
       isPrivacyMode, togglePrivacyMode,
       isEditMode, toggleEditMode,
-      updateUserPreferences
+      updateUserPreferences,
+      isLocked, lockVault, unlockVault, setVaultPin,
+      hasVaultPin: !!vaultPin
     }}>
       {children}
     </AuthContext.Provider>
