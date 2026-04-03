@@ -99,9 +99,6 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
   const currentMonth = new Date().getMonth();
   const currentYear = new Date().getFullYear();
-  const today = new Date().getDate();
-  const lastDay = new Date(currentYear, currentMonth + 1, 0).getDate();
-  const daysRemaining = lastDay - today + 1;
 
   const safeFormat = (val: any) => {
     if (isPrivacyMode) return '••••';
@@ -114,11 +111,8 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
     const totalOtherIncome = (incomeSources || []).reduce((sum, src) => sum + parseFloat(src.amount || '0'), 0);
     const monthlyNetPay = parseFloat(taxEstimate?.monthly_net || '0');
     const startingBudget = monthlyNetPay + totalOtherIncome - monthlyBills;
-    const spentThisMonth = (transactions || []).filter(tx => { const d = new Date(tx.date); return d.getMonth() === currentMonth && d.getFullYear() === currentYear && tx.type === 'expense'; }).reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
-    const remainingCapital = startingBudget - spentThisMonth;
-    const dailyPower = Math.max(0, remainingCapital / daysRemaining);
-    return { startingBudget, spentThisMonth, remainingCapital, dailyPower };
-  }, [accounts, transactions, taxEstimate, incomeSources, currentMonth, currentYear, daysRemaining]);
+    return { startingBudget };
+  }, [accounts, taxEstimate, incomeSources]);
 
   const filteredTransactions = (transactions || []).filter(tx => { const query = searchQuery.toLowerCase(); return ( (tx.category?.toLowerCase().includes(query)) || (tx.description?.toLowerCase().includes(query)) || (tx.amount?.toString().includes(query)) ); });
   const displayTransactions = filteredTransactions.slice(0, visibleCount);
@@ -156,19 +150,11 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
   const sections = {
     power: (
       <SortableItem key="power" id="power" isEditMode={isEditMode}>
-        <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', marginBottom: '40px', background: 'rgba(59, 130, 246, 0.04)', border: `1px solid ${boxColors['power'] || '#3b82f6'}`, borderRadius: '24px', padding: '30px 40px', width: '100%', boxSizing: 'border-box', justifyContent: 'space-around', alignItems: 'center', '--local-accent': boxColors['power'] || '#3b82f6' } as any}>
+        <div className="card" style={{ display: 'flex', flexWrap: 'wrap', gap: '40px', marginBottom: '40px', background: 'rgba(59, 130, 246, 0.04)', border: `1px solid ${boxColors['power'] || '#3b82f6'}`, borderRadius: '24px', padding: '30px 40px', width: '100%', boxSizing: 'border-box', justifyContent: 'center', alignItems: 'center', '--local-accent': boxColors['power'] || '#3b82f6' } as any}>
           {renderColorPicker('power', '#3b82f6')}
           <div className="spec-gauge" style={{ textAlign: 'center' }}>
             <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>MONTHLY AVAILABLE</label>
-            <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.4rem', fontWeight: 900, paddingRight: '10px' }}>${safeFormat(metrics.startingBudget)}</div>
-          </div>
-          <div className="spec-gauge" style={{ textAlign: 'center' }}>
-            <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>DAILY SPENDING POWER</label>
-            <div className="gauge-val" style={{ color: metrics.dailyPower > 0 ? 'var(--primary)' : 'var(--danger)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.8rem', fontWeight: 900, paddingRight: '10px' }}>${safeFormat(metrics.dailyPower)}</div>
-          </div>
-          <div className="spec-gauge" style={{ textAlign: 'center' }}>
-            <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>DAYS REMAINING</label>
-            <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.4rem', fontWeight: 900, opacity: 0.8 }}>{daysRemaining} Days</div>
+            <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace", fontSize: '2.2rem', fontWeight: 900 }}>${safeFormat(metrics.startingBudget)}</div>
           </div>
         </div>
       </SortableItem>
@@ -183,9 +169,11 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
         {showCsvImport ? (
           <CsvImport userId={userId} accounts={accounts} onImportComplete={() => { setShowCsvImport(false); loadData(); }} onCancel={() => setShowCsvImport(false)} />
         ) : (
-          <section className="card" style={{ borderTop: `4px solid ${boxColors['log'] || '#3b82f6'}`, borderLeft: `4px solid ${boxColors['log'] || '#3b82f6'}`, padding: '45px', position: 'relative', marginBottom: '40px', '--local-accent': boxColors['log'] || '#3b82f6' } as any}>
-            {renderColorPicker('log', '#3b82f6')}
-            <div style={{ fontSize: '1rem', fontWeight: 900, color: boxColors['log'] || 'var(--primary)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>Transaction Forge</div>
+          <section className="card" style={{ borderTop: `4px solid ${boxColors['log'] || 'var(--primary)'}`, borderLeft: `4px solid ${boxColors['log'] || 'var(--primary)'}`, padding: '45px', position: 'relative', marginBottom: '40px', '--local-accent': boxColors['log'] || '#3b82f6' } as any}>
+            {renderColorPicker('log', 'var(--primary)')}
+            <div style={{ fontSize: '1rem', fontWeight: 900, color: boxColors['log'] || 'var(--primary)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+              Transaction Submission
+            </div>
             <TransactionForm accounts={accounts} budgets={budgets} userId={userId} onTransactionAdded={loadData} customColor={boxColors['log'] || 'var(--primary)'} />
           </section>
         )}
@@ -266,7 +254,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
                   <div key={tx.id} className="ticker-item card glow-primary" style={{ padding: '15px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                       <div><div style={{ fontWeight: 800, fontSize: '0.9rem' }}>{tx.category}</div><div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>{tx.date?.split('T')[0]} • {acc?.name || 'CASH'}</div>{budget && <div style={{ fontSize: '0.6rem', color: 'var(--primary)', fontWeight: 900, marginTop: '2px' }}>[{budget.name.toUpperCase()}]</div>}</div>
-                      <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 900, fontSize: '1rem' }} className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`}>{tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}</div><button onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)} className="remove-btn-minimal" style={{ fontSize: '0.6rem', fontWeight: 800, marginTop: '5px' }}>REMOVE</button></div>
+                      <div style={{ textAlign: 'right' }}><div style={{ fontWeight: 900, fontSize: '1rem' }} className={`currency ${tx.type === 'income' ? 'positive' : 'negative'}`}>{tx.type === 'income' ? '+' : '-'}${safeFormat(tx.amount)}</div><button onClick={() => handleDeleteTx(tx.id, tx.category, tx.amount)} className="remove-mini-btn" style={{ fontSize: '0.6rem', fontWeight: 800, marginTop: '5px' }}>REMOVE</button></div>
                     </div>
                   </div>
                 );

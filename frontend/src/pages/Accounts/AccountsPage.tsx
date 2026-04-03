@@ -173,7 +173,7 @@ const AccountsPage: React.FC<AccountsPageProps> = ({ userId, accounts, goals, lo
         <div className="card" style={{ position: 'relative', marginBottom: '30px', borderTop: `4px solid ${boxColors['log'] || '#3b82f6'}`, borderLeft: `4px solid ${boxColors['log'] || '#3b82f6'}`, padding: '45px', '--local-accent': boxColors['log'] || '#3b82f6' } as any}>
           {renderColorPicker('log', '#3b82f6')}
           <div style={{ fontSize: '1rem', fontWeight: 900, color: boxColors['log'] || 'var(--primary)', textAlign: 'center', marginBottom: '40px', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
-            {editingAccount ? `Editing: ${editingAccount.name}` : 'Vault Architect'}
+            {editingAccount ? `Editing: ${editingAccount.name}` : 'Add New Account'}
           </div>
           <AccountForm onAccountAdded={() => { loadData(); setEditingAccount(null); }} userId={userId} groups={accountGroups} initialData={editingAccount} onCancel={editingAccount ? () => setEditingAccount(null) : undefined} customColor={boxColors['log'] || '#3b82f6'} />
         </div>

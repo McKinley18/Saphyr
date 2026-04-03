@@ -98,7 +98,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
       <form onSubmit={handleSubmit}>
         {/* VISION ENTRY POINT */}
         <div style={groupStyle}>
-          <label style={{ ...labelStyle, color: accent }}>SAPHYR VISION (NLP FORGE)</label>
+          <label style={{ ...labelStyle, color: accent }}>NEW TRANSACTION</label>
           <div style={{ position: 'relative' }}>
             <input 
               placeholder="e.g. Log $45.00 for Dinner at Shell on Credit Card" 
@@ -106,7 +106,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
               onChange={e => setVisionQuery(e.target.value)}
               style={{ padding: '20px 25px', border: `2px solid ${accent}`, background: `${accent}05 !important`, fontSize: '1rem', fontWeight: 700 }}
             />
-            <div style={{ position: 'absolute', right: '20px', top: '50%', transform: 'translateY(-50%)', opacity: 0.4, fontSize: '1.2rem' }}>✨</div>
           </div>
         </div>
 

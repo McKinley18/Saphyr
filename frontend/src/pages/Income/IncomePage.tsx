@@ -91,7 +91,22 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const [isSourceFormOpen, setIsSourceFormOpen] = useState(false);
 
   const [syncMessage, setSyncMessage] = useState('');
-  const [hasInitialPopulated, setHasInitialPopulated] = useState(false);
+
+  // REACTIVE TRUTH: Sync local form state whenever the server prop updates
+  useEffect(() => {
+    if (savedSalary) {
+      setIsHourly(!!savedSalary.is_hourly);
+      if (savedSalary.is_hourly) {
+        setHourlyRate(savedSalary.hourly_rate || 0);
+        setHoursPerWeek(savedSalary.hours_per_week || 40);
+      } else {
+        setAnnualGross(savedSalary.annual_salary || 0);
+      }
+      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
+      setLocalFilingStatus(savedSalary.filing_status || '');
+      setLocalState(savedSalary.state || '');
+    }
+  }, [savedSalary]);
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('saphyr_income_colors_v2');
@@ -125,16 +140,15 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => {
-    if (savedSalary && !hasInitialPopulated) {
+    if (savedSalary) {
       setIsHourly(!!savedSalary.is_hourly);
       if (savedSalary.is_hourly) { setHourlyRate(savedSalary.hourly_rate || 0); setHoursPerWeek(savedSalary.hours_per_week || 40); } 
       else { setAnnualGross(savedSalary.annual_salary || 0); }
       setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
       setLocalFilingStatus(savedSalary.filing_status || '');
       setLocalState(savedSalary.state || '');
-      setHasInitialPopulated(true);
     }
-  }, [savedSalary, hasInitialPopulated]);
+  }, [savedSalary]);
 
   const safeFormat = (val: any) => {
     const num = parseFloat(val || '0');
