@@ -8,11 +8,10 @@ interface AccountFormProps {
   initialData?: any;
   onCancel?: () => void;
   customColor?: string;
-  renderColorPicker?: () => React.ReactNode;
 }
 
 const AccountForm: React.FC<AccountFormProps> = ({ 
-  onAccountAdded, userId, groups, initialData, onCancel, customColor, renderColorPicker 
+  onAccountAdded, userId, groups, initialData, onCancel, customColor 
 }) => {
   const [formData, setFormData] = useState({
     name: '',

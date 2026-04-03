@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import UserGuide from '../../components/UserGuide/UserGuide';
-import { useModal } from '../../context/ModalContext';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   createIncomeSource, 
@@ -50,9 +48,7 @@ const SortableItem: React.FC<SortableItemProps> = ({ id, children, isEditMode })
 interface IncomePageProps {
   userId: string;
   savedSalary: any; 
-  taxEstimate: any;
   incomeSources: any[];
-  accounts: any[];
   handleSalarySubmit: (e: any, status: string, extraData?: any) => void;
   loadData: () => void;
 }
@@ -76,9 +72,8 @@ const US_STATES = [
 const ACCENT_OPTIONS = ['#3b82f6', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '#06b6d4', '#fb7185', '#64748b'];
 
 const IncomePage: React.FC<IncomePageProps> = ({ 
-  userId, savedSalary, taxEstimate, incomeSources, accounts, handleSalarySubmit, loadData
+  userId, savedSalary, incomeSources, handleSalarySubmit, loadData
 }) => {
-  const { confirm } = useModal();
   const { isEditMode } = useAuth();
 
   const [localFilingStatus, setLocalFilingStatus] = useState('');
@@ -87,7 +82,6 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const [hourlyRate, setHourlyRate] = useState(0);
   const [hoursPerWeek, setHoursPerWeek] = useState(40);
   const [annualGross, setAnnualGross] = useState(0);
-  const [salaryAccountId, setSalaryAccountId] = useState('');
   const [pct401k, setPct401k] = useState(0);
   
   const [newDeduction, setNewDeduction] = useState({ id: null, name: '', amount: '', is_pre_tax: true, frequency: 'monthly', account_id: '' });
@@ -138,7 +132,6 @@ const IncomePage: React.FC<IncomePageProps> = ({
       setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
       setLocalFilingStatus(savedSalary.filing_status || '');
       setLocalState(savedSalary.state || '');
-      setSalaryAccountId(savedSalary.account_id || '');
       setHasInitialPopulated(true);
     }
   }, [savedSalary, hasInitialPopulated]);
@@ -151,7 +144,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const onSaveProfile = async (e: React.FormEvent) => {
     if (e && e.preventDefault) e.preventDefault();
     const calculatedAnnual = isHourly ? (Number(hourlyRate) * Number(hoursPerWeek) * 52) : Number(annualGross);
-    const payload = { is_hourly: isHourly, hourly_rate: isHourly ? Number(hourlyRate) : 0, hours_per_week: isHourly ? Number(hoursPerWeek) : 40, annual_salary: calculatedAnnual, contribution_401k_percent: Number(pct401k) / 100, state: localState, filing_status: localFilingStatus, account_id: salaryAccountId || null };
+    const payload = { is_hourly: isHourly, hourly_rate: isHourly ? Number(hourlyRate) : 0, hours_per_week: isHourly ? Number(hoursPerWeek) : 40, annual_salary: calculatedAnnual, contribution_401k_percent: Number(pct401k) / 100, state: localState, filing_status: localFilingStatus, account_id: null };
     setSyncMessage('SYNCING...');
     await handleSalarySubmit(e, localFilingStatus, payload);
     setSyncMessage('PROFILE UPDATED');

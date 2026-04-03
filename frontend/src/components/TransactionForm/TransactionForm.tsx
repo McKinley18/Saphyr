@@ -39,7 +39,6 @@ const TransactionForm: React.FC<TransactionFormProps> = ({
     if (!visionQuery) return;
     
     const query = visionQuery.toLowerCase();
-    const parts = query.split(' ');
     
     let newAmount = formData.amount;
     let newAccountId = formData.account_id;

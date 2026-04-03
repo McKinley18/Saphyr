@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { useModal } from '../../context/ModalContext';
 import { useAuth } from '../../context/AuthContext';
-import { deleteAccount, updateAccount, createGoal, deleteGoal, updateGoal } from '../../services/api';
+import { deleteAccount, createGoal, deleteGoal, updateGoal } from '../../services/api';
 import AccountForm from '../../components/AccountForm/AccountForm';
 import {
   DndContext,

@@ -6,10 +6,9 @@ interface BillFormProps {
   userId: string;
   groups: string[];
   customColor?: string;
-  renderColorPicker?: () => React.ReactNode;
 }
 
-const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, customColor, renderColorPicker }) => {
+const BillForm: React.FC<BillFormProps> = ({ onBillAdded, userId, groups, customColor }) => {
   const [formData, setFormData] = useState({
     name: '',
     balance: '',
