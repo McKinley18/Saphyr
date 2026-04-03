@@ -312,7 +312,7 @@ function AppContent() {
               <Route path="/reset-password" element={<PageWrapper><ResetPasswordPage /></PageWrapper>} />
               
               <Route path="/" element={<ProtectedRoute><PageWrapper><Dashboard taxEstimate={taxEstimate} accounts={accounts} transactions={transactions} incomeSources={incomeSources} snapshots={snapshots} loadData={loadData}/></PageWrapper></ProtectedRoute>} />
-              <Route path="/income" element={<ProtectedRoute><PageWrapper><IncomePage userId={user?.id} savedSalary={salary} taxEstimate={taxEstimate} incomeSources={incomeSources} accounts={accounts} handleSalarySubmit={handleSalarySubmit} loadData={loadData}/></PageWrapper></ProtectedRoute>} />
+              <Route path="/income" element={<ProtectedRoute><PageWrapper><IncomePage userId={user?.id} savedSalary={salary} incomeSources={incomeSources} handleSalarySubmit={handleSalarySubmit} loadData={loadData}/></PageWrapper></ProtectedRoute>} />
               <Route path="/accounts" element={<ProtectedRoute><PageWrapper><AccountsPage userId={user?.id} accounts={accounts} goals={goals} loadData={loadData}/></PageWrapper></ProtectedRoute>} />
               <Route path="/bills" element={<ProtectedRoute><PageWrapper><BillsPage userId={user?.id} accounts={accounts} loadData={loadData}/></PageWrapper></ProtectedRoute>} />
               <Route path="/transactions" element={<ProtectedRoute><PageWrapper><TransactionsPage userId={user?.id} accounts={accounts} transactions={transactions} budgets={budgets} taxEstimate={taxEstimate} incomeSources={incomeSources} loadData={loadData}/></PageWrapper></ProtectedRoute>} />

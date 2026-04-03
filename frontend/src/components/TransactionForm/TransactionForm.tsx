@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { createTransaction } from '../../services/api';
-import { motion, AnimatePresence } from 'framer-motion';
 
 interface TransactionFormProps {
   accounts: any[];
