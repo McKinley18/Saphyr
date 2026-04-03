@@ -53,7 +53,7 @@ const ACCENT_OPTIONS = ['#3b82f6', '#10b981', '#8b5cf6', '#f43f5e', '#f59e0b', '
 const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => {
   const { isPrivacyMode, isEditMode } = useAuth();
   const { confirm } = useModal();
-  const [viewMode, setViewMode] = useState<'table' | 'box'>('box');
+  const [viewMode] = useState<'table' | 'box'>('box');
   const [activeTab, setActiveTab] = useState<'tracker' | 'simulator'>('tracker');
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
