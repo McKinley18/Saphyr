@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { 
   createIncomeSource, 
@@ -91,22 +91,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const [isSourceFormOpen, setIsSourceFormOpen] = useState(false);
 
   const [syncMessage, setSyncMessage] = useState('');
-
-  // REACTIVE TRUTH: Sync local form state whenever the server prop updates
-  useEffect(() => {
-    if (savedSalary) {
-      setIsHourly(!!savedSalary.is_hourly);
-      if (savedSalary.is_hourly) {
-        setHourlyRate(savedSalary.hourly_rate || 0);
-        setHoursPerWeek(savedSalary.hours_per_week || 40);
-      } else {
-        setAnnualGross(savedSalary.annual_salary || 0);
-      }
-      setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
-      setLocalFilingStatus(savedSalary.filing_status || '');
-      setLocalState(savedSalary.state || '');
-    }
-  }, [savedSalary]);
+  const [hasInitialPopulated, setHasInitialPopulated] = useState(false);
 
   const [boxColors, setBoxColors] = useState<Record<string, string>>(() => {
     const saved = localStorage.getItem('saphyr_income_colors_v2');
@@ -115,7 +100,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
 
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('saphyr_income_layout');
-    return saved ? JSON.parse(saved) : ['assessment', 'forge', 'ribbon', 'modules', 'log'];
+    return saved ? JSON.parse(saved) : ['assessment', 'forge', 'strategy', 'ribbon', 'modules', 'log'];
   });
 
   const handleColorChange = (id: string, color: string) => {
@@ -140,15 +125,16 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }), useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }));
 
   useEffect(() => {
-    if (savedSalary) {
+    if (savedSalary && !hasInitialPopulated) {
       setIsHourly(!!savedSalary.is_hourly);
       if (savedSalary.is_hourly) { setHourlyRate(savedSalary.hourly_rate || 0); setHoursPerWeek(savedSalary.hours_per_week || 40); } 
       else { setAnnualGross(savedSalary.annual_salary || 0); }
       setPct401k((savedSalary.contribution_401k_percent || 0) * 100);
       setLocalFilingStatus(savedSalary.filing_status || '');
       setLocalState(savedSalary.state || '');
+      setHasInitialPopulated(true);
     }
-  }, [savedSalary]);
+  }, [savedSalary, hasInitialPopulated]);
 
   const safeFormat = (val: any) => {
     const num = parseFloat(val || '0');
@@ -161,6 +147,7 @@ const IncomePage: React.FC<IncomePageProps> = ({
     const payload = { is_hourly: isHourly, hourly_rate: isHourly ? Number(hourlyRate) : 0, hours_per_week: isHourly ? Number(hoursPerWeek) : 40, annual_salary: calculatedAnnual, contribution_401k_percent: Number(pct401k) / 100, state: localState, filing_status: localFilingStatus, account_id: null };
     setSyncMessage('SYNCING...');
     await handleSalarySubmit(e, localFilingStatus, payload);
+    setAnnualGross(0); setHourlyRate(0); setPct401k(0); setLocalFilingStatus(''); setLocalState('');
     setSyncMessage('PROFILE UPDATED');
     setTimeout(() => setSyncMessage(''), 3000);
   };
@@ -186,20 +173,33 @@ const IncomePage: React.FC<IncomePageProps> = ({
   const taxableIncome = Math.max(0, rawGross + taxedOtherIncomeAnnual - (totalMonthlyPreTax * 12) - standardDeduction);
   const monthlyFica = (Math.min(rawGross + taxedOtherIncomeAnnual, 176100) * 0.0765) / 12;
 
-  let annualFedTax = 0;
-  if (taxableIncome > 0) {
-    if (rawFiling === 'single') {
-      if (taxableIncome <= 11925) annualFedTax = taxableIncome * 0.10;
-      else if (taxableIncome <= 48475) annualFedTax = 1192.50 + (taxableIncome - 11925) * 0.12;
-      else if (taxableIncome <= 103350) annualFedTax = 5578.50 + (taxableIncome - 48475) * 0.22;
-      else annualFedTax = 17651 + (taxableIncome - 103350) * 0.24;
-    } else {
-      if (taxableIncome <= 23850) annualFedTax = taxableIncome * 0.10;
-      else if (taxableIncome <= 96950) annualFedTax = 2385 + (taxableIncome - 23850) * 0.12;
-      else annualFedTax = 11157 + (taxableIncome - 96950) * 0.22;
+  const taxCalc = useMemo(() => {
+    let annualFedTax = 0;
+    const brackets = rawFiling === 'single' ? [
+      { limit: 11925, rate: 0.10 }, { limit: 48475, rate: 0.12 }, { limit: 103350, rate: 0.22 }, { limit: 197300, rate: 0.24 }, { limit: 250525, rate: 0.32 }, { limit: 626350, rate: 0.35 }, { limit: Infinity, rate: 0.37 }
+    ] : [
+      { limit: 23850, rate: 0.10 }, { limit: 96950, rate: 0.12 }, { limit: 206700, rate: 0.22 }, { limit: 394600, rate: 0.24 }, { limit: 501050, rate: 0.32 }, { limit: 751600, rate: 0.35 }, { limit: Infinity, rate: 0.37 }
+    ];
+    
+    let remaining = taxableIncome;
+    let prevLimit = 0;
+    let currentBracket = brackets[0];
+    for (const b of brackets) {
+      const chunk = Math.min(remaining, b.limit - prevLimit);
+      annualFedTax += chunk * b.rate;
+      remaining -= chunk;
+      if (remaining <= 0) { currentBracket = b; break; }
+      prevLimit = b.limit;
     }
-  }
-  const monthlyFedTax = annualFedTax / 12;
+
+    const nextBracket = brackets[brackets.indexOf(currentBracket) + 1] || currentBracket;
+    const distanceToDrop = taxableIncome - prevLimit;
+    const potentialSavings = distanceToDrop * (currentBracket.rate - (brackets[brackets.indexOf(currentBracket)-1]?.rate || 0));
+
+    return { annualFedTax, currentBracket, nextBracket, distanceToDrop, potentialSavings };
+  }, [taxableIncome, rawFiling]);
+
+  const monthlyFedTax = taxCalc.annualFedTax / 12;
   const noTaxStates = ['AK','FL','NV','SD','TN','TX','WA','WY'];
   const monthlyStateTax = noTaxStates.includes(rawState) ? 0 : (taxableIncome * 0.05) / 12;
   const totalMonthlyTaxes = monthlyFedTax + monthlyFica + monthlyStateTax;
@@ -261,6 +261,28 @@ const IncomePage: React.FC<IncomePageProps> = ({
             <div style={groupStyle}><label style={labelStyle}>401k Contribution (%)</label><input style={{ padding: '18px 20px' }} type="number" value={pct401k || ''} onChange={e => setPct401k(parseFloat(e.target.value) || 0)} placeholder="e.g. 6" /></div>
             <button type="submit" className="primary-btn" style={{ height: '60px', fontSize: '1.1rem', background: boxColors['income'] || 'var(--primary-gradient)', marginTop: '10px' }}>{syncMessage || 'SYNC CURRENT PROFILE'}</button>
           </form>
+        </section>
+      </SortableItem>
+    ),
+    strategy: (
+      <SortableItem key="strategy" id="strategy" isEditMode={isEditMode}>
+        <section className="card" style={{ borderTop: `4px solid ${boxColors['strat'] || 'var(--success)'}`, borderLeft: `4px solid ${boxColors['strat'] || 'var(--success)'}`, padding: '35px', '--local-accent': boxColors['strat'] || 'var(--success)' } as any}>
+          {renderColorPicker('strat')}
+          <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--success)', marginBottom: '20px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Tax Optimization Hub</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+            <div className="card card-condensed" style={{ borderLeft: '4px solid var(--border)' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>CURRENT BRACKET</label>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900 }}>{Math.round(taxCalc.currentBracket.rate * 100)}%</div>
+              <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '5px' }}>Taxable: ${safeFormat(taxableIncome)}</p>
+            </div>
+            <div className="card card-condensed" style={{ background: 'rgba(16, 185, 129, 0.03)', borderLeft: '4px solid var(--success)' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--success)' }}>EFFICIENCY MOVE</label>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, lineHeight: '1.4', marginTop: '5px' }}>
+                Increase 401k/HSA by <span className="currency" style={{ color: 'var(--success)' }}>${safeFormat(taxCalc.distanceToDrop)}</span> to drop your taxable income below the {Math.round(taxCalc.currentBracket.rate * 100)}% threshold.
+              </div>
+              <div style={{ fontSize: '0.7rem', fontWeight: 900, marginTop: '10px', color: 'var(--text-muted)' }}>POTENTIAL SAVINGS: ${safeFormat(taxCalc.potentialSavings)}/YR</div>
+            </div>
+          </div>
         </section>
       </SortableItem>
     ),

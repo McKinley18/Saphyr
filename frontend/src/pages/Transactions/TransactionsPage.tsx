@@ -108,11 +108,25 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
 
   const metrics = useMemo(() => {
     const monthlyBills = (accounts || []).filter(acc => acc && acc.is_bill).reduce((sum, acc) => sum + Math.abs(parseFloat(acc.balance || '0')), 0);
-    const totalOtherIncome = (incomeSources || []).reduce((sum, src) => sum + parseFloat(src.amount || '0'), 0);
+    const totalOtherIncome = (incomeSources || []).reduce((sum, src) => {
+      const amt = parseFloat(src.amount);
+      const mult = src.frequency === 'weekly' ? (52/12) : (src.frequency === 'bi-weekly' ? (26/12) : 1);
+      return sum + (amt * mult);
+    }, 0);
     const monthlyNetPay = parseFloat(taxEstimate?.monthly_net || '0');
     const startingBudget = monthlyNetPay + totalOtherIncome - monthlyBills;
-    return { startingBudget };
-  }, [accounts, taxEstimate, incomeSources]);
+
+    const spentThisMonth = (transactions || [])
+      .filter(tx => {
+        const d = new Date(tx.date);
+        const now = new Date();
+        return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear() && tx.type === 'expense';
+      })
+      .reduce((sum, tx) => sum + parseFloat(tx.amount || '0'), 0);
+
+    const remainingAvailable = startingBudget - spentThisMonth;
+    return { remainingAvailable };
+  }, [accounts, taxEstimate, incomeSources, transactions]);
 
   const filteredTransactions = (transactions || []).filter(tx => { const query = searchQuery.toLowerCase(); return ( (tx.category?.toLowerCase().includes(query)) || (tx.description?.toLowerCase().includes(query)) || (tx.amount?.toString().includes(query)) ); });
   const displayTransactions = filteredTransactions.slice(0, visibleCount);
@@ -154,7 +168,7 @@ const TransactionsPage: React.FC<TransactionsPageProps> = ({
           {renderColorPicker('power', '#3b82f6')}
           <div className="spec-gauge" style={{ textAlign: 'center' }}>
             <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>MONTHLY AVAILABLE</label>
-            <div className="gauge-val" style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace", fontSize: '2.2rem', fontWeight: 900 }}>${safeFormat(metrics.startingBudget)}</div>
+            <div className="gauge-val" style={{ color: metrics.remainingAvailable >= 0 ? 'var(--text)' : 'var(--danger)', fontFamily: "'JetBrains Mono', monospace", fontSize: '2.2rem', fontWeight: 900 }}>${safeFormat(metrics.remainingAvailable)}</div>
           </div>
         </div>
       </SortableItem>
