@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import UserGuide from '../../components/UserGuide/UserGuide';
 import { deleteAccount, updateAccount } from '../../services/api';
 import BillForm from '../../components/BillForm/BillForm';
@@ -63,7 +63,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
 
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('saphyr_bills_layout');
-    return saved ? JSON.parse(saved) : ['banner', 'architect', 'obligations'];
+    return saved ? JSON.parse(saved) : ['banner', 'sentinel', 'architect', 'obligations'];
   });
 
   const handleColorChange = (id: string, color: string) => {
@@ -96,6 +96,17 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
   const bills = (accounts || []).filter(acc => acc.is_bill);
   const totalMonthlyBills = bills.reduce((sum, b) => sum + Math.abs(parseFloat(b.balance || '0')), 0);
   const billGroups = Array.from(new Set(bills.map(b => b.group_name).filter(Boolean))) as string[];
+
+  // DEBT SENTINEL LOGIC
+  const debtSentinel = useMemo(() => {
+    const interestBearing = bills.filter(b => parseFloat(b.apr) > 0);
+    if (interestBearing.length === 0) return null;
+
+    const avalancheTarget = [...interestBearing].sort((a, b) => parseFloat(b.apr) - parseFloat(a.apr))[0];
+    const totalDailyInterest = interestBearing.reduce((sum, b) => sum + (Math.abs(parseFloat(b.balance)) * (parseFloat(b.apr)/100) / 365), 0);
+
+    return { avalancheTarget, totalDailyInterest };
+  }, [bills]);
 
   const handleDeleteBill = async (id: string, name: string) => {
     const isConfirmed = await confirm({ title: 'Delete Obligation', message: `Are you sure you want to remove the "${name}" obligation?`, confirmLabel: 'DELETE OBLIGATION', isDanger: true });
@@ -132,13 +143,37 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
           {renderColorPicker('banner', '#3b82f6')}
           <div style={{ textAlign: 'center' }}>
             <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>MONTHLY BILLS</label>
-            <div style={{ color: 'var(--danger)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.8rem', fontWeight: 900 }}>${safeFormat(totalMonthlyBills)}</div>
+            <div style={{ color: 'var(--danger)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.8rem', fontWeight: 900 }} className="currency">${safeFormat(totalMonthlyBills)}</div>
           </div>
           <div style={{ textAlign: 'center' }}>
             <label style={{ fontSize: '0.6rem', color: 'var(--text-muted)', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '8px', display: 'block' }}>TOTAL OBLIGATIONS</label>
             <div style={{ color: 'var(--text)', fontFamily: "'JetBrains Mono', monospace", fontSize: '1.8rem', fontWeight: 900 }}>{bills.length}</div>
           </div>
         </div>
+      </SortableItem>
+    ),
+    sentinel: (
+      <SortableItem key="sentinel" id="sentinel" isEditMode={isEditMode}>
+        {debtSentinel && (
+          <section className="card" style={{ borderTop: `4px solid ${boxColors['sentinel'] || 'var(--danger)'}`, borderLeft: `4px solid ${boxColors['sentinel'] || 'var(--danger)'}`, padding: '35px', marginBottom: '40px', '--local-accent': boxColors['sentinel'] || 'var(--danger)' } as any}>
+            {renderColorPicker('sentinel', 'var(--danger)')}
+            <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--danger)', marginBottom: '20px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Debt Sentinel Strategy</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
+              <div className="card card-condensed" style={{ borderLeft: '4px solid var(--danger)', background: 'rgba(244, 63, 94, 0.03)' }}>
+                <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--danger)' }}>AVALANCHE PRIORITY</label>
+                <div style={{ fontSize: '1.1rem', fontWeight: 900, marginTop: '5px' }}>{debtSentinel.avalancheTarget.name.toUpperCase()}</div>
+                <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginTop: '5px', lineHeight: '1.4' }}>
+                  Target this account first to neutralize its <strong>{debtSentinel.avalancheTarget.apr}% APR</strong>.
+                </p>
+              </div>
+              <div className="card card-condensed" style={{ borderLeft: '4px solid var(--border)' }}>
+                <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)' }}>DAILY INTEREST DRAIN</label>
+                <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--danger)' }} className="currency">-${safeFormat(debtSentinel.totalDailyInterest)}</div>
+                <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '5px' }}>This is your capital leakage per 24 hours.</p>
+              </div>
+            </div>
+          </section>
+        )}
       </SortableItem>
     ),
     architect: (
@@ -166,7 +201,7 @@ const BillsPage: React.FC<BillsPageProps> = ({ userId, accounts, loadData }) => 
                     <button onClick={() => handleDeleteBill(bill.id, bill.name)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1.1rem', width: 'auto', padding: '2px' }}>&times;</button>
                   </div>
                 </div>
-                <div style={{ fontSize: '1.5rem', fontWeight: 900, margin: '5px 0' }}>${safeFormat(Math.abs(bill.balance))}</div>
+                <div style={{ fontSize: '1.5rem', fontWeight: 900, margin: '5px 0' }} className="currency">${safeFormat(Math.abs(bill.balance))}</div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
                   <span style={{ fontSize: '0.6rem', fontWeight: 800, color: 'var(--text-muted)' }}>DUE: {getOrdinal(bill.due_day || 0)}</span>
                   <button onClick={() => handleTogglePaid(bill)} style={{ width: 'auto', padding: '6px 15px', fontSize: '0.65rem', background: bill.is_paid ? 'var(--success-gradient)' : 'var(--subtle-overlay)', color: bill.is_paid ? 'white' : 'var(--text)' }}>{bill.is_paid ? 'PAID' : 'MARK PAID'}</button>

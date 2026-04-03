@@ -70,7 +70,7 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
 
   const [layoutOrder, setLayoutOrder] = useState<string[]>(() => {
     const saved = localStorage.getItem('saphyr_trends_layout');
-    return saved ? JSON.parse(saved) : ['specs', 'momentum', 'projections', 'trajectory'];
+    return saved ? JSON.parse(saved) : ['specs', 'inflation', 'momentum', 'projections', 'trajectory'];
   });
 
   const handleColorChange = (id: string, color: string) => {
@@ -100,15 +100,18 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
     return isNaN(num) ? '0.00' : num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   };
 
-  const renderColorPicker = (id: string, defaultColor: string) => (
-    isEditMode && (
-      <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.5)', padding: '4px', borderRadius: '20px', border: '1px solid var(--border)' }}>
-        {ACCENT_OPTIONS.map(c => (
-          <button key={c} onClick={() => handleColorChange(id, c)} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: (boxColors[id] || defaultColor) === c ? '1.5px solid white' : 'none', cursor: 'pointer', padding: 0, marginTop: 0 }} />
-        ))}
-      </div>
-    )
-  );
+  const currentNW = snapshots.length > 0 ? parseFloat(snapshots[snapshots.length-1]?.net_worth || 0) : 0;
+
+  // INFLATION ADJUSTMENT (REAL WEALTH)
+  const realWealth = useMemo(() => {
+    const inflationRate = 0.03; // Standard 3%
+    const calculatePower = (years: number) => currentNW / Math.pow(1 + inflationRate, years);
+    return {
+      fiveYear: calculatePower(5),
+      tenYear: calculatePower(10),
+      loss: currentNW - calculatePower(10)
+    };
+  }, [currentNW]);
 
   const chartData = useMemo(() => {
     if (!snapshots || snapshots.length === 0) return { labels: [], datasets: [] };
@@ -134,6 +137,16 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
     return { delta, savingRate, totalSpent };
   }, [snapshots, transactions]);
 
+  const renderColorPicker = (id: string, defaultColor: string) => (
+    isEditMode && (
+      <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, display: 'flex', gap: '4px', background: 'rgba(0,0,0,0.5)', padding: '4px', borderRadius: '20px', border: '1px solid var(--border)' }}>
+        {ACCENT_OPTIONS.map(c => (
+          <button key={c} onClick={() => handleColorChange(id, c)} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: (boxColors[id] || defaultColor) === c ? '1.5px solid white' : 'none', cursor: 'pointer', padding: 0, marginTop: 0 }} />
+        ))}
+      </div>
+    )
+  );
+
   const sections = {
     specs: (
       <SortableItem key="specs" id="specs" isEditMode={isEditMode}>
@@ -152,6 +165,29 @@ const TrendsPage: React.FC<TrendsPageProps> = ({ snapshots = [], transactions = 
             <div style={{ color: 'var(--danger)', fontFamily: 'JetBrains Mono', fontSize: '1.1rem', fontWeight: 900 }}>-${safeFormat(metrics.totalSpent)}</div>
           </div>
         </div>
+      </SortableItem>
+    ),
+    inflation: (
+      <SortableItem key="inflation" id="inflation" isEditMode={isEditMode}>
+        <section className="card" style={{ borderTop: `4px solid ${boxColors['inflation'] || 'var(--warning)'}`, borderLeft: `4px solid ${boxColors['inflation'] || 'var(--warning)'}`, padding: '35px', marginBottom: '20px', '--local-accent': boxColors['inflation'] || 'var(--warning)' } as any}>
+          {renderColorPicker('inflation', 'var(--warning)')}
+          <div style={{ fontSize: '0.9rem', fontWeight: 900, color: 'var(--warning)', marginBottom: '25px', letterSpacing: '0.1em', textTransform: 'uppercase' }}>Real Wealth Matrix (Inflation Adjusted)</div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '30px' }}>
+            <div style={{ textAlign: 'center' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>5-YEAR PURCHASING POWER</label>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900 }} className="currency">${safeFormat(realWealth.fiveYear)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--text-muted)', display: 'block', marginBottom: '8px' }}>10-YEAR PURCHASING POWER</label>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900 }} className="currency">${safeFormat(realWealth.tenYear)}</div>
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <label style={{ fontSize: '0.6rem', fontWeight: 900, color: 'var(--danger)', display: 'block', marginBottom: '8px' }}>PROJECTED LOSS (10YR)</label>
+              <div style={{ fontSize: '1.4rem', fontWeight: 900, color: 'var(--danger)' }} className="currency">-${safeFormat(realWealth.loss)}</div>
+            </div>
+          </div>
+          <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '25px', fontStyle: 'italic', textAlign: 'center' }}>Calculated at a standard 3.0% annual inflation rate. Represents future value in today's dollars.</p>
+        </section>
       </SortableItem>
     ),
     momentum: (
